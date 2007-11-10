@@ -1,0 +1,17 @@
+Building Kijaro
+===============
+
+Kijaro is built using ant.
+The build.xml is in the make subdirectory.
+You should create a build.properties file in this directory first as follows:
+
+---------------------------------------------------
+boot.java.home = {location of your jdk6}
+---------------------------------------------------
+
+This build.properties should NOT be checked into svn
+
+The result of the build (target: build) is a dist subdirectory.
+This contains lib/javac.jar with the compiled code.
+This also contains bin/java for running it in Unix.
+Windows users can adapt the batch file in the examples area.
