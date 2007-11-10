@@ -331,6 +331,12 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return scan(node.getExpression(), p);
     }
 
+    public R visitMethodReference(MethodReferenceTree node, P p) {  // FCM-MREF
+        R r = scan(node.getTarget(), p);
+        r = scanAndReduce(node.getTypes(), p, r);
+        return null;
+    }
+
     public R visitIdentifier(IdentifierTree node, P p) {
         return null;
     }

@@ -830,6 +830,8 @@ public class Scanner implements Lexer {
                         token = DOT;
                     }
                     return;
+                case '#':  // FCM-MREF
+                    scanChar(); token = HASH; return;
                 case ',':
                     scanChar(); token = COMMA; return;
                 case ';':

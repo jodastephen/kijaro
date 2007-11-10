@@ -250,6 +250,11 @@ public class TreeScanner extends Visitor {
         scan(tree.selected);
     }
 
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        scan(tree.target);
+        scan(tree.types);
+    }
+
     public void visitIdent(JCIdent tree) {
     }
 

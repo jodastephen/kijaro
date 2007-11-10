@@ -31,6 +31,7 @@ import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
+
 import static com.sun.tools.javac.util.ListBuffer.lb;
 
 import com.sun.tools.javac.tree.JCTree.*;
@@ -1041,6 +1042,38 @@ public class Parser {
                     // typeArgs saved for next loop iteration.
                     t = toP(F.at(pos).Select(t, ident()));
                     break;
+                case HASH:  // FCM-MREF
+                    // type-or-variable # identifier
+                    if ((mode & EXPR) != 0) {
+                        mode = EXPR;  // whole of the method reference is an expression
+                        System.out.println("Processing # (A)");
+                        System.out.println(" Mode " + mode);
+                        System.out.println(" Token " + S.token());
+                        System.out.println(" TName " + S.name());
+                        
+                        S.nextToken();
+                        System.out.println(" Token " + S.token());
+                        System.out.println(" TName " + S.name());
+                        if (typeArgs != null || S.token() != IDENTIFIER) {
+                            return illegal();
+                        }
+                        JCExpression primary = t;
+                        System.out.println(" Primary " + primary);
+                        Name name = ident();  // calls S.nextToken()
+                        System.out.println(" Name " + name);
+                        
+                        System.out.println(" Token " + S.token());
+                        if (S.token() != LPAREN) {
+                            System.out.println(" Illegal");
+                            return illegal();  // field reference
+                        } else {
+                            List<JCExpression> types = types();
+                            System.out.println(" Types " + types);
+                            t = toP(F.at(pos).MethodReference(primary, name, types));
+                            System.out.println(" Token " + S.token());
+                        }
+                    }
+                    break loop;
                 default:
                     break loop;
                 }
@@ -1114,6 +1147,33 @@ public class Parser {
                     t = argumentsOpt(typeArgs, typeArgumentsOpt(t));
                     typeArgs = null;
                 }
+            } else if (S.token() == HASH) {  // FCM-MREF
+                System.out.println("Processing # (B)");
+                System.out.println(" Token " + S.token());
+                System.out.println(" TName " + S.name());
+                
+                S.nextToken();
+                System.out.println(" Token " + S.token());
+                System.out.println(" TName " + S.name());
+                if (typeArgs != null || S.token() != IDENTIFIER) {
+                    return illegal();
+                }
+                JCExpression primary = t;
+                System.out.println(" Primary " + primary);
+                Name name = ident();  // calls S.nextToken()
+                System.out.println(" Name " + name);
+                
+                System.out.println(" Token " + S.token());
+                if (S.token() != LPAREN) {
+                    System.out.println(" Illegal");
+                    return illegal();  // field reference
+                } else {
+                    List<JCExpression> types = types();
+                    System.out.println(" Types " + types);
+                    t = toP(F.at(pos).MethodReference(primary, name, types));
+                    System.out.println(" Token " + S.token());
+                }
+                break;
             } else {
                 break;
             }
@@ -1186,6 +1246,26 @@ public class Parser {
         int pos = S.pos();
         List<JCExpression> args = arguments();
         return toP(F.at(pos).Apply(typeArgs, t, args));
+    }
+
+    /** Types = "(" [Type { "," Type }] ")"
+     */
+    List<JCExpression> types() {  // FCM-MREF
+        ListBuffer<JCExpression> types = lb();
+        if (S.token() == LPAREN) {
+            S.nextToken();
+            if (S.token() != RPAREN) {
+                types.append(type());  // or primitive type
+                while (S.token() == COMMA) {
+                    S.nextToken();
+                    types.append(type());
+                }
+            }
+            accept(RPAREN);
+        } else {
+            syntaxError(S.pos(), "expected", keywords.token2string(LPAREN));
+        }
+        return types.toList();
     }
 
     /**  TypeArgumentsOpt = [ TypeArguments ]
@@ -2694,7 +2774,7 @@ public class Parser {
         case JCTree.PLUS_ASG: case JCTree.MINUS_ASG:
         case JCTree.MUL_ASG: case JCTree.DIV_ASG: case JCTree.MOD_ASG:
         case JCTree.APPLY: case JCTree.NEWCLASS:
-        case JCTree.ERRONEOUS:
+        case JCTree.METHODREFERENCE: case JCTree.ERRONEOUS:  // FCM-MREF
             return t;
         default:
             log.error(t.pos, "not.stmt");

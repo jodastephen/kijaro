@@ -3073,6 +3073,40 @@ public class Lower extends TreeTranslator {
             result = access(tree.sym, tree, enclOp, qualifiedSuperAccess);
     }
 
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Lower (Start)");
+        
+        // start process of changing the AST
+        make_at(tree.target.pos());
+        
+        // find the method that resolves the Method
+        Symbol findMethod = lookupMethod(tree.target.pos(),
+                   names.findMethod,
+                   currentClass.type,
+                   List.of(syms.classType, syms.stringType, new ArrayType(syms.classType, syms.arrayClass)));
+//      System.out.println("Done find:" + findMethod);
+        
+        // build the arguments into a list
+        ListBuffer<JCExpression> elems = new ListBuffer<JCExpression>();
+        for (JCExpression expr : tree.types) {
+            elems.append(classOf(expr));
+        }
+        JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
+        typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
+        JCExpression methodName = makeLit(syms.stringType, tree.name.toString());
+        List<JCExpression> args = List.of(classOf(tree.target), methodName, typesArray);
+        
+        // change the AST
+        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
+        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
+        System.out.println("Done create:" + invokeFindNode);
+        
+        // return the updated AST
+        result = invokeFindNode;
+        
+        System.out.println("Lower (End)");
+    }
+
     public void visitLetExpr(LetExpr tree) {
         tree.defs = translateVarDefs(tree.defs);
         tree.expr = translate(tree.expr, tree.type);

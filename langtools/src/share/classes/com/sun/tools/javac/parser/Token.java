@@ -106,6 +106,7 @@ public enum Token {
     SEMI(";"),
     COMMA(","),
     DOT("."),
+    HASH("#"),  // FCM-MREF
     ELLIPSIS("..."),
     EQ("="),
     GT(">"),

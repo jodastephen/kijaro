@@ -111,8 +111,16 @@ public class Keywords {
             return log.getLocalizedString("token.bad-symbol");
         case EOF:
             return log.getLocalizedString("token.end-of-input");
-        case DOT: case COMMA: case SEMI: case LPAREN: case RPAREN:
-        case LBRACKET: case RBRACKET: case LBRACE: case RBRACE:
+        case DOT:
+        case HASH:  // FCM-MREF
+        case COMMA:
+        case SEMI:
+        case LPAREN:
+        case RPAREN:
+        case LBRACKET:
+        case RBRACKET:
+        case LBRACE:
+        case RBRACE:
             return "'" + token.name + "'";
         default:
             return token.name;
