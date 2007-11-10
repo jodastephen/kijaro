@@ -41,8 +41,8 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
-import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
+import com.sun.source.tree.Tree.Kind;
 
 import static com.sun.tools.javac.code.BoundKind.*;
 
@@ -219,9 +219,13 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static final int SELECT = INDEXED + 1;
 
+    /** Selections, of type MethodReference.
+     */
+    public static final int METHODREFERENCE = SELECT + 1;
+
     /** Simple identifiers, of type Ident.
      */
-    public static final int IDENT = SELECT + 1;
+    public static final int IDENT = METHODREFERENCE + 1;
 
     /** Literals, of type Literal.
      */
@@ -1664,6 +1668,45 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
+     * A method reference or method literal.
+     */
+    public static class JCMethodReference extends JCExpression implements MethodReferenceTree {
+        // FCM-MREF
+        public JCExpression target;
+        public Name name;
+        public List<JCExpression> types;
+        protected JCMethodReference(
+                JCExpression target,
+                Name identifier,
+                List<JCExpression> types) {
+            this.target = target;
+            this.name = identifier;
+            this.types = (types == null) ? List.<JCExpression>nil() : types;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitMethodReference(this); }
+
+        public Kind getKind() { return Kind.METHOD_REFERENCE; }
+        public JCExpression getTarget() { return target; }
+        public Name getName() { return name; }
+        public List<JCExpression> getTypes() {
+            return types;
+        }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitMethodReference(this, d);
+        }
+        @Override
+        public JCMethodReference setType(Type type) {
+            super.setType(type);
+            return this;
+        }
+        public int getTag() {
+            return METHODREFERENCE;
+        }
+    }
+
+    /**
      * An identifier
      * @param idname the name
      * @param sym the symbol
@@ -2164,6 +2207,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitTypeTest(JCInstanceOf that)         { visitTree(that); }
         public void visitIndexed(JCArrayAccess that)         { visitTree(that); }
         public void visitSelect(JCFieldAccess that)          { visitTree(that); }
+        public void visitMethodReference(JCMethodReference that) { visitTree(that); }  // FCM-MREF
         public void visitIdent(JCIdent that)                 { visitTree(that); }
         public void visitLiteral(JCLiteral that)             { visitTree(that); }
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }

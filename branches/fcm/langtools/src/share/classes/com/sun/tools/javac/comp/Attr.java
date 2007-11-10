@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 import javax.lang.model.element.ElementKind;
 import javax.tools.JavaFileObject;
 
@@ -444,6 +443,15 @@ public class Attr extends JCTree.Visitor {
         return argtypes.toList();
     }
 
+
+    /** Attribute a type argument list, returning a list of types.
+     */
+    List<Type> attribMethodParamTypes(List<JCExpression> trees, Env<AttrContext> env) {  // FCM-MREF
+        ListBuffer<Type> argtypes = new ListBuffer<Type>();
+        for (List<JCExpression> l = trees; l.nonEmpty(); l = l.tail)
+            argtypes.append(chk.checkMethodParamType(l.head.pos(), attribType(l.head, env)));
+        return argtypes.toList();
+    }
 
     /**
      * Attribute type variables (of generic classes or methods).
@@ -2420,6 +2428,28 @@ public class Attr extends JCTree.Visitor {
                                      + " actual:" + actual
                                      + " formal: " + formal);
         }
+    }
+
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Attr.visitMethodReference (Start)");
+        
+        // return type of j.u.r.Method
+        tree.type = syms.reflectMethodType;
+        
+        // resolve the target
+        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        System.out.println(site);
+        
+        // resolve the method types
+        List<Type> types = attribMethodParamTypes(tree.types, env);
+        
+        // validate that method exists and is accessible
+        Symbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, types, null);
+        System.out.println("Matched:" + sym);
+//      tree.resolved = sym;
+        result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
+        
+        System.out.println("Attr.visitMethodReference (End)");
     }
 
     public void visitLiteral(JCLiteral tree) {

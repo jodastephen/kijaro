@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.jvm.*;
@@ -520,6 +519,31 @@ public class Check {
             return typeTagError(pos,
                                 JCDiagnostic.fragment("type.req.ref"),
                                 t);
+        }
+    }
+
+    /** Check that type is a method parameter type.
+     *  @param pos           Position to be used for error reporting.
+     *  @param t             The type to be checked.
+     */
+    Type checkMethodParamType(DiagnosticPosition pos, Type t) {  // FCM-MREF
+        switch (t.tag) {
+        case BOOLEAN:
+        case CHAR:
+        case BYTE:
+        case SHORT:
+        case INT:
+        case LONG:
+        case FLOAT:
+        case DOUBLE:
+        case CLASS:
+        case ARRAY:
+        case ERROR:
+            return t;
+        default:
+            return typeTagError(pos,
+                    JCDiagnostic.fragment("type.req.ref"),
+                    t);
         }
     }
 

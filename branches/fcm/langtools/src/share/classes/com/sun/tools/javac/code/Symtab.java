@@ -119,6 +119,7 @@ public class Symtab {
     public final Type stringBuilderType;
     public final Type cloneableType;
     public final Type serializableType;
+    public final Type reflectMethodType;  // FCM-MREF
     public final Type throwableType;
     public final Type errorType;
     public final Type illegalArgumentExceptionType;
@@ -351,6 +352,7 @@ public class Symtab {
         cloneableType = enterClass("java.lang.Cloneable");
         throwableType = enterClass("java.lang.Throwable");
         serializableType = enterClass("java.io.Serializable");
+        reflectMethodType = enterClass("java.lang.reflect.Method");  // FCM-MREF
         errorType = enterClass("java.lang.Error");
         illegalArgumentExceptionType = enterClass("java.lang.IllegalArgumentException");
         exceptionType = enterClass("java.lang.Exception");

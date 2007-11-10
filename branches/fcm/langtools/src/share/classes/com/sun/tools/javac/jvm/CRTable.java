@@ -473,6 +473,13 @@ implements CRTFlags {
             result = sr;
         }
 
+        public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+            SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
+            sr.mergeWith(csp(tree.target));
+            sr.mergeWith(csp(tree.types));
+            result = sr;
+        }
+
         public void visitIdent(JCIdent tree) {
             SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
             result = sr;

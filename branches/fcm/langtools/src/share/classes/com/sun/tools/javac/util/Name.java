@@ -509,6 +509,7 @@ public class Name implements javax.lang.model.element.Name {
             hashCode = fromString("hashCode");
             compareTo = fromString("compareTo");
             getDeclaringClass = fromString("getDeclaringClass");
+            findMethod = fromString("findMethod");  // FCM-MREF
             ex = fromString("ex");
             finalize = fromString("finalize");
         }
@@ -643,6 +644,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name hashCode;
         public final Name compareTo;
         public final Name getDeclaringClass;
+        public final Name findMethod;  // FCM-MREF
         public final Name ex;
         public final Name finalize;
     }

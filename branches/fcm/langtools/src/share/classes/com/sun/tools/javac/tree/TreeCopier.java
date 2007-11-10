@@ -25,7 +25,6 @@
 
 package com.sun.tools.javac.tree;
 
-import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.util.List;
@@ -289,6 +288,13 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCFieldAccess t = (JCFieldAccess) node;
         JCExpression selected = copy(t.selected, p);
         return M.at(t.pos).Select(selected, t.name);
+    }
+
+    public JCTree visitMethodReference(MethodReferenceTree node, P p) {  // FCM-MREF
+        JCMethodReference t = (JCMethodReference) node;
+        JCExpression target = copy(t.target, p);
+        List<JCExpression> types = copy(t.types, p);
+        return M.at(t.pos).MethodReference(target, t.name, types);
     }
 
     public JCTree visitEmptyStatement(EmptyStatementTree node, P p) {
