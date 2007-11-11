@@ -616,7 +616,7 @@ public class Scanner implements Lexer {
         case '!': case '%': case '&': case '*': case '?':
         case '+': case '-': case ':': case '<': case '=':
         case '>': case '^': case '|': case '~':
-        case '@':
+	      case '@': case '#':
             return true;
         default:
             return false;
@@ -965,9 +965,19 @@ public class Scanner implements Lexer {
         }
     }
 
-    /** Return the current token, set by nextToken().
+    /** Return the current token, set by nextToken(),
+     *  Converts local tokens to identifiers.
      */
     public Token token() {
+	if (token.isLocal())
+	    return Token.IDENTIFIER;
+        return token;
+    }
+    
+    /** Return the current token, set by nextToken(),
+     *  Local tokens are returned without conversion.
+     */
+    public Token localToken() {
         return token;
     }
 

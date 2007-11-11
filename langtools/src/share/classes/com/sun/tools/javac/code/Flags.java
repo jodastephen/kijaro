@@ -217,6 +217,22 @@ public class Flags {
      */
     public static final long PROPRIETARY = 1L<<38;
 
+    /** Flag that marks a property
+     */
+    public static final long PROPERTY = 1L<<39;
+    
+    /** Flag that marks a property getter
+     */
+    public static final long PROPERTY_GETTER = 1L<<40;
+    
+    /** Flag that marks a property setter
+     */
+    public static final long PROPERTY_SETTER = 1L<<41;
+    
+    /** Flag that marks a class that defined property
+     */
+    public static final long BEAN = 1L<<42;
+    
     /** Modifier masks.
      */
     public static final int

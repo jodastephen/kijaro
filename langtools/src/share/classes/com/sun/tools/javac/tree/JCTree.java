@@ -41,8 +41,8 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
-import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
+import com.sun.source.tree.Tree.Kind;
 
 import static com.sun.tools.javac.code.BoundKind.*;
 
@@ -102,10 +102,14 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     /** Variable definitions, of type VarDef.
      */
     public static final int VARDEF = METHODDEF + 1;
+    
+    /** Property definitions, of type PropertyDef.
+     */
+    public static final int PROPERTYDEF = VARDEF + 1;
 
     /** The no-op statement ";", of type Skip
      */
-    public static final int SKIP = VARDEF + 1;
+    public static final int SKIP = PROPERTYDEF + 1;
 
     /** Blocks, of type Block.
      */
@@ -218,10 +222,14 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     /** Selections, of type Select.
      */
     public static final int SELECT = INDEXED + 1;
+    
+    /** Sharp access, of type Sharp.
+     */
+    public static final int SHARP = SELECT + 1;
 
     /** Simple identifiers, of type Ident.
      */
-    public static final int IDENT = SELECT + 1;
+    public static final int IDENT = SHARP + 1;
 
     /** Literals, of type Literal.
      */
@@ -722,7 +730,63 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
 
         @Override
         public int getTag() {
-            return VARDEF;
+          return VARDEF;
+        }
+    }
+
+    /**
+     * A property definition.
+     */
+    public static class JCPropertyDecl extends JCTree implements PropertyTree {
+        public JCModifiers mods;
+        public Name name;
+        public JCExpression proptype;
+        
+        // a bit set of GETTER_ONLY, SETTER_ONLY, BOUND and SYNTHETIZED
+        public int styles;
+        
+        public JCMethodDecl getter;
+        public JCMethodDecl setter;
+        
+        public PropertySymbol sym;
+        
+        public static final int SYNTHETIZED = 1<<0;
+        public static final int GETTER_ONLY = 1<<1;
+        public static final int SETTER_ONLY = 1<<2;
+        public static final int BOUND       = 1<<3;
+        
+        protected JCPropertyDecl(JCModifiers mods,
+        	      Name name,
+                JCExpression proptype,
+                int styles,
+                JCMethodDecl getter,
+                JCMethodDecl setter) {
+            this.mods = mods;
+            this.name = name;
+            this.styles = styles;
+            this.proptype = proptype;
+            this.getter = getter;
+            this.setter = setter;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitPropertyDef(this); }
+
+        public Kind getKind() { return Kind.PROPERTY; }
+        public JCModifiers getModifiers() { return mods; }
+        public Name getName() { return name; }
+        public JCTree getType() { return proptype; }
+        public boolean isBound() { return (styles & BOUND) != 0; }
+        public MethodTree getGetter() { return getter; }
+        public MethodTree getSetter() { return setter; }
+        
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitProperty(this, d);
+        }
+        
+        @Override
+        public int getTag() {
+            return PROPERTYDEF;
         }
     }
 
@@ -1662,6 +1726,36 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
             return SELECT;
         }
     }
+    
+    /**
+     * Selects through packages and classes
+     * @param selected selected Tree hierarchie
+     * @param selector name of field to select thru
+     * @param sym symbol of the selected property
+     */
+    public static class JCSharpAccess extends JCExpression implements SharpSelectTree {
+        public JCExpression selected;
+        public Name name;
+        public PropertySymbol sym;
+        protected JCSharpAccess(JCExpression selected, Name name) {
+            this.selected = selected;
+            this.name = name;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitSharp(this); }
+
+        public Kind getKind() { return Kind.SHARP_SELECT; }
+        public JCExpression getExpression() { return selected; }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitSharpSelect(this, d);
+        }
+        public Name getIdentifier() { return name; }
+        @Override
+        public int getTag() {
+            return SHARP;
+        }
+    }
 
     /**
      * An identifier
@@ -2132,6 +2226,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitClassDef(JCClassDecl that)          { visitTree(that); }
         public void visitMethodDef(JCMethodDecl that)        { visitTree(that); }
         public void visitVarDef(JCVariableDecl that)         { visitTree(that); }
+        public void visitPropertyDef(JCPropertyDecl that)    { visitTree(that); }
         public void visitSkip(JCSkip that)                   { visitTree(that); }
         public void visitBlock(JCBlock that)                 { visitTree(that); }
         public void visitDoLoop(JCDoWhileLoop that)          { visitTree(that); }
@@ -2164,6 +2259,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitTypeTest(JCInstanceOf that)         { visitTree(that); }
         public void visitIndexed(JCArrayAccess that)         { visitTree(that); }
         public void visitSelect(JCFieldAccess that)          { visitTree(that); }
+        public void visitSharp(JCSharpAccess that)           { visitTree(that); }
         public void visitIdent(JCIdent that)                 { visitTree(that); }
         public void visitLiteral(JCLiteral that)             { visitTree(that); }
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }
@@ -2179,5 +2275,4 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
 
         public void visitTree(JCTree that)                   { assert false; }
     }
-
 }

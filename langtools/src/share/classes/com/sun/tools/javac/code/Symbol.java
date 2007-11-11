@@ -980,6 +980,79 @@ public abstract class Symbol implements Element {
         }
     }
 
+    /** A class for property symbols.
+     */
+    public static class PropertySymbol extends VarSymbol {
+        public MethodSymbol getter;
+        public MethodSymbol setter;
+        public MethodSymbol literal;
+      
+        public PropertySymbol(long flags,Name name,Type type,Symbol owner) {
+            super(flags, name, type, owner);
+        }
+      
+        // relocate a symbol to obey to binary compatibility rule
+        @Override
+        public VarSymbol clone(Symbol newOwner) {
+	          PropertySymbol p = new PropertySymbol(flags_field, name, type, newOwner);
+            p.pos = pos;
+            p.adr = adr;
+            p.getter = getter;
+            p.setter = setter;
+            return p;
+        }
+      
+        @Override
+        public Symbol asMemberOf(Type site,Types types) {
+	          return new PropertySymbol(flags_field, name, types.memberType(site, this), owner);
+        }
+      
+        @Override
+        public void setData(Object data) {
+            throw new AssertionError();
+        }
+      
+        @Override
+        public void setLazyConstValue(Env<AttrContext> env,
+	        Log log,
+	        Attr attr,
+	        JCTree.JCExpression initializer) {
+	          throw new AssertionError();
+        }
+      
+        @Override
+        public Object getConstantValue() {
+            return null;
+        }
+
+        @Override
+        public boolean isExceptionParameter() {
+            return false;
+        }
+
+        @Override
+        public Object getConstValue() {
+            return null;
+        }
+      
+        @Override
+        public ElementKind getKind() {
+            return ElementKind.PROPERTY;
+        }
+      
+        //FIXME Remi should be List<? extends Symbol>
+        @Override
+        public java.util.List<Symbol> getEnclosedElements() {
+            if (getter == null)
+                return List.<Symbol>of(setter);
+            else
+                if (setter == null)
+        	          return List.<Symbol>of(getter);
+                else
+        	          return List.<Symbol>of(getter, setter);
+        }
+    }
+    
     /** A class for method symbols.
      */
     public static class MethodSymbol extends Symbol implements ExecutableElement {
@@ -998,6 +1071,10 @@ public abstract class Symbol implements Element {
          *  declaration.
          */
         public Attribute defaultValue = null;
+        
+        /** Property symbol in case of setter or getter of a property or null.
+         */
+        public PropertySymbol property = null;
 
         /** Construct a method symbol, given its flags, name, type and owner.
          */
@@ -1247,6 +1324,17 @@ public abstract class Symbol implements Element {
 
         public List<Type> getThrownTypes() {
             return asType().getThrownTypes();
+        }
+        
+        @Override
+        public Symbol getEnclosingElement() {
+            if (property != null)
+        	      return property;
+            return super.getEnclosingElement();
+        }
+        
+        public VariableElement getEnclosingProperty() {
+            return property;
         }
     }
 

@@ -429,6 +429,9 @@ public class Name implements javax.lang.model.element.Name {
             _this = fromString("this");
             _super = fromString("super");
             _default = fromString("default");
+	          Property = fromString("Property");
+	          PropertyGetter = fromString("PropertyGetter");
+	          PropertySetter = fromString("PropertySetter");
 
             _class = fromString("class");
             java_lang = fromString("java.lang");
@@ -476,6 +479,11 @@ public class Name implements javax.lang.model.element.Name {
             length = fromString("length");
             valueOf = fromString("valueOf");
             value = fromString("value");
+            properties = fromString("properties");
+	          propertyChanged = fromString("propertyChanged");
+	          //propertyOf = fromString("propertyOf");
+	          get = fromString("get");
+	          set = fromString("set");
             getMessage = fromString("getMessage");
             getClass = fromString("getClass");
 
@@ -597,6 +605,10 @@ public class Name implements javax.lang.model.element.Name {
         public final Name RuntimeInvisibleAnnotations;
         public final Name RuntimeVisibleParameterAnnotations;
         public final Name RuntimeInvisibleParameterAnnotations;
+	
+	      public final Name Property;
+	      public final Name PropertyGetter;
+	      public final Name PropertySetter;
 
         public final Name Value;
         public final Name EnclosingMethod;
@@ -610,6 +622,11 @@ public class Name implements javax.lang.model.element.Name {
         public final Name length;
         public final Name valueOf;
         public final Name value;
+        //public final Name propertyOf;
+        public final Name properties;
+        public final Name propertyChanged;
+        public final Name get;
+        public final Name set;
         public final Name getMessage;
         public final Name getClass;
 

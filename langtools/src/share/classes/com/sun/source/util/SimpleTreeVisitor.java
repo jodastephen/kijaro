@@ -80,6 +80,10 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
         return defaultAction(node, p);
     }
 
+    public R visitProperty(PropertyTree node, P p) {
+	      return defaultAction(node, p);
+    }
+    
     public R visitEmptyStatement(EmptyStatementTree node, P p) {
         return defaultAction(node, p);
     }
@@ -206,6 +210,10 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
 
     public R visitMemberSelect(MemberSelectTree node, P p) {
         return defaultAction(node, p);
+    }
+    
+    public R visitSharpSelect(SharpSelectTree node, P p) {
+	return defaultAction(node, p);
     }
 
     public R visitIdentifier(IdentifierTree node, P p) {

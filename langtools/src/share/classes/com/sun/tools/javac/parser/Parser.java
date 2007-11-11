@@ -120,6 +120,9 @@ public class Parser {
 
     /** The name table. */
     private Name.Table names;
+    
+    /** Is property allowed */
+    private final boolean allowProperty;
 
     /** Construct a parser from a given scanner, tree factory and log.
      */
@@ -141,6 +144,7 @@ public class Parser {
         this.allowForeach = source.allowForeach();
         this.allowStaticImport = source.allowStaticImport();
         this.allowAnnotations = source.allowAnnotations();
+        this.allowProperty = options.get("allowProperty") != null;
         this.keepDocComments = keepDocComments;
         if (keepDocComments) docComments = new HashMap<JCTree,String>();
         this.errorTree = F.Erroneous();
@@ -1004,6 +1008,21 @@ public class Parser {
                         typeArgs = null;
                     }
                     break loop;
+                case SHARP:
+                    if ((mode & EXPR) != 0) {
+                        if (allowProperty) {
+                	    mode = EXPR;
+                            S.nextToken();
+                            t = to(F.at(pos).Sharp(t, ident()));
+                            break loop;
+                        } else {
+                	    log.error(S.pos(), "sharp.as.operator");
+                	    // try to continue with DOT
+                        }
+                    } else {
+                	log.error(S.pos(), "sharp.in.type");
+                	// try to continue with DOT
+                    }
                 case DOT:
                     S.nextToken();
                     typeArgs = typeArgumentsOpt(EXPR);
@@ -2062,6 +2081,109 @@ public class Parser {
         return variableDeclaratorsRest(S.pos(), mods, type, ident(), false, null, vdefs);
     }
 
+    /** PropertyDeclaratorRest = BracketsOpt beanOpt
+     *                         = BracketsOpt beanOpt "get"
+     *                         = BracketsOpt beanOpt "get" MethodBody
+     *                         = BracketsOpt beanOpt "get" MethodBody "set" "(" formal ")" MethodBody
+     *                         = BracketsOpt beanOpt "set"
+     *                         = BracketsOpt beanOpt "set" "(" formal ")" MethodBody
+     *
+     *  @param dc       The documentation comment for the property declaration, or null.
+     */
+    JCPropertyDecl propertyDeclaratorRest(int pos,
+	    JCModifiers mods,
+	    JCExpression type,
+	    Name name,
+	    String dc) {
+	
+	type = bracketsOpt(type);
+	
+	int styles = 0;
+	if (S.localToken() == Token.BOUND) {
+	    styles |= JCPropertyDecl.BOUND;
+	    S.nextToken();
+	}
+	JCMethodDecl getter = null;
+	JCMethodDecl setter = null;
+	if (S.localToken() == SET) {
+	    int setpos = S.pos();
+	    styles |= JCPropertyDecl.SETTER_ONLY;
+	    S.nextToken();
+	    if (S.token() == LBRACE) {
+		setter = propertySetter(setpos, mods, type, name); 
+	    } else {
+		styles |= JCPropertyDecl.SYNTHETIZED;
+	    }
+	} else {
+	    if (S.localToken() == GET) {
+		int getpos = S.pos();
+		S.nextToken();
+		if (S.token() == LBRACE) {
+		    getter = propertyGetter(getpos, mods, type, name);
+		    if (S.localToken() == SET) {
+			int setpos = S.pos();
+			S.nextToken();
+			setter = propertySetter(setpos, mods, type, name);
+		    } else {
+			styles |= JCPropertyDecl.GETTER_ONLY;
+		    }
+		} else {
+		    styles |= JCPropertyDecl.SYNTHETIZED |
+		              JCPropertyDecl.GETTER_ONLY;
+		}
+	    } else {
+		styles |= JCPropertyDecl.SYNTHETIZED;
+	    }
+	}
+	JCPropertyDecl result =
+	    toP(F.at(pos).PropertyDef(mods, name, type, styles, getter, setter));
+	attach(result, dc);
+	return result;
+    }
+
+    /** MethodBody
+     */
+    private JCMethodDecl propertyGetter(int pos,
+	                     JCModifiers mods,
+	                     JCExpression type,
+	                     Name name) {
+	JCBlock body = block();
+	return toP(F.at(pos).MethodDef(mods,
+		toAccessorName("get",name),
+		type, 
+		List.<JCTypeParameter>nil(),
+		List.<JCVariableDecl>nil(), 
+		List.<JCExpression>nil(),
+		body,
+		null));
+    }
+
+    /** "(" FormalParameter ")" MethodBody 
+     */
+     private JCMethodDecl propertySetter(int pos,
+	     JCModifiers mods,
+	     JCExpression type,
+	     Name name) {
+	 accept(LPAREN);
+	 JCVariableDecl param = formalParameter();
+	 accept(RPAREN);
+	 JCBlock body = block();
+	 return toP(F.at(pos).MethodDef(mods, 
+		 toAccessorName("set",name), 
+		 F.TypeIdent(TypeTags.VOID),
+		 List.<JCTypeParameter>nil(),
+		 List.of(param), 
+		 List.<JCExpression>nil(),
+		 body, 
+		 null));
+     }
+     
+     private Name toAccessorName(String prefix, Name name) {
+	 String text = name.toString();
+	 text = prefix + Character.toUpperCase(text.charAt(0)) + text.substring(1);
+	 return Name.fromString(names, text);
+     }
+    
     /** VariableDeclaratorsRest = VariableDeclaratorRest { "," VariableDeclarator }
      *  ConstantDeclaratorsRest = ConstantDeclaratorRest { "," ConstantDeclarator }
      *
@@ -2495,6 +2617,7 @@ public class Parser {
                 Name name = S.name();
                 pos = S.pos();
                 JCExpression type;
+                boolean isProperty = allowProperty && S.localToken() == PROPERTY;
                 boolean isVoid = S.token() == VOID;
                 if (isVoid) {
                     type = to(F.at(pos).TypeIdent(TypeTags.VOID));
@@ -2510,22 +2633,46 @@ public class Parser {
                         isInterface, true, dc));
                 } else {
                     pos = S.pos();
-                    name = ident();
-                    if (S.token() == LPAREN) {
+                    JCExpression type2 = type();
+                    if (S.token() == LPAREN && type2.getTag() == JCTree.IDENT) {
+                        name = ((JCIdent)type2).getName();
                         return List.of(methodDeclaratorRest(
                             pos, mods, type, name, typarams,
                             isInterface, isVoid, dc));
                     } else if (!isVoid && typarams.isEmpty()) {
-                        List<JCTree> defs =
-                            variableDeclaratorsRest(pos, mods, type, name, isInterface, dc,
-                                                    new ListBuffer<JCTree>()).toList();
-                        storeEnd(defs.last(), S.endPos());
-                        accept(SEMI);
-                        return defs;
+                	if (isProperty && S.token() == IDENTIFIER) {
+                            name = ident();
+                            JCTree property=propertyDeclaratorRest(pos, mods, type2, name, dc);
+                            accept(SEMI);
+                            return List.<JCTree>of(property);
+                        } else {
+                            switch(type2.getTag()) {
+                                case JCTree.TYPEARRAY:
+                                    while(type2.getTag() == JCTree.TYPEARRAY) {
+                            	        type = F.TypeArray(type);
+                                        //FIXME Remi toP is not called
+                            	        type.pos = type2.pos;
+                            	        type2 = ((JCArrayTypeTree)type2).elemtype;
+                                    }
+                                    if (type2.getTag() != JCTree.IDENT)
+                                        break;
+                                    // else go to the ident case
+                                case JCTree.IDENT:
+                                    name = ((JCIdent)type2).getName();
+                                    List<JCTree> defs =
+                                        variableDeclaratorsRest(pos, mods, type, name, isInterface, dc,
+                                                              new ListBuffer<JCTree>()).toList();
+                                    storeEnd(defs.last(), S.endPos());
+                                    accept(SEMI);
+                                    return defs;
+                                
+                            }
+                            return List.<JCTree>of(syntaxError(pos, "expected", keywords.token2string(IDENTIFIER)));
+                        }
                     } else {
                         pos = S.pos();
-                        List<JCTree> err = isVoid
-                            ? List.<JCTree>of(toP(F.at(pos).MethodDef(mods, name, type, typarams,
+                        List<JCTree> err = (isVoid && type2.getTag() == JCTree.IDENT)
+                            ? List.<JCTree>of(toP(F.at(pos).MethodDef(mods, ((JCIdent)type2).getName(), type, typarams,
                                 List.<JCVariableDecl>nil(), List.<JCExpression>nil(), null, null)))
                             : null;
                         return List.<JCTree>of(syntaxError(S.pos(), err, "expected", keywords.token2string(LPAREN)));

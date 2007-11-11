@@ -64,6 +64,10 @@ public enum ElementKind {
      * {@code ENUM_CONSTANT}).
      */
     FIELD,
+    /** A property. 
+     *  @since 1.7 
+     */
+    PROPERTY,
     /** A parameter of a method or constructor. */
     PARAMETER,
     /** A local variable. */
