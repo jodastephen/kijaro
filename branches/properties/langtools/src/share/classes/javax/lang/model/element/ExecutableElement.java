@@ -97,4 +97,12 @@ public interface ExecutableElement extends Element {
      * @return the default value, or {@code null} if none
      */
     AnnotationValue getDefaultValue();
+    
+    /**
+     * Returns the enclosing property of this executable if this is an
+     * accessor method (getter or setter). Returns {@code null} otherwise.
+     * 
+     * @see Element#getEnclosingElement()
+     */
+    VariableElement getEnclosingProperty();
 }

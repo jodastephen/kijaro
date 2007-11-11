@@ -58,19 +58,27 @@ public class Keywords {
         log = Log.instance(context);
         names = Name.Table.instance(context);
 
-        for (Token t : Token.values()) {
-            if (t.name != null)
-                enterKeyword(t.name, t);
-            else
-                tokenName[t.ordinal()] = null;
-        }
+	      int maxKey = 0;
+	      Token[] tokens = Token.values();
+	      Name[] tokenName = new Name[tokens.length];
+	      for (Token t : tokens) {
+	          if (t.name != null) {
+		           Name n = names.fromString(t.name);
+		           if (n.index > maxKey)
+		               maxKey = n.index;
+		           tokenName[t.ordinal()] = n;
+	          }
+	      }
 
-        key = new Token[maxKey+1];
-        for (int i = 0; i <= maxKey; i++) key[i] = IDENTIFIER;
-        for (Token t : Token.values()) {
-            if (t.name != null)
-                key[tokenName[t.ordinal()].index] = t;
-        }
+	      Token[] key = new Token[maxKey+1];
+	      for (int i = 0; i <= maxKey; i++) key[i] = IDENTIFIER;
+	      for (Token t : tokens) {
+	          if (t.name != null)
+		            key[tokenName[t.ordinal()].index] = t;
+	      }
+	
+	      this.key = key;
+	      this.maxKey = maxKey;
     }
 
 
@@ -85,11 +93,7 @@ public class Keywords {
 
     /**  The number of the last entered keyword.
      */
-    private int maxKey = 0;
-
-    /** The names of all tokens.
-     */
-    private Name[] tokenName = new Name[Token.values().length];
+    private final int maxKey;
 
     public String token2string(Token token) {
         switch (token) {
@@ -117,11 +121,5 @@ public class Keywords {
         default:
             return token.name;
         }
-    }
-
-    private void enterKeyword(String s, Token token) {
-        Name n = names.fromString(s);
-        tokenName[token.ordinal()] = n;
-        if (n.index > maxKey) maxKey = n.index;
     }
 }

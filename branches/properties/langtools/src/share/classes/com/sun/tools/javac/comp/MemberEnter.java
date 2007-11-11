@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 import javax.tools.JavaFileObject;
 
 import com.sun.tools.javac.code.*;
@@ -420,6 +419,9 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
             addEnumMembers(tree, env);
         }
         memberEnter(tree.defs, env);
+        if ((tree.sym.flags() & Flags.BEAN) != 0) {
+            addBeanMembers(tree, env);
+        }
     }
 
     /** Add the implicit members for an enum type
@@ -491,6 +493,31 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
                                         syms.methodClass),
                          tree.sym);
         memberEnter(make.MethodDef(compareTo, null), env);
+    }
+    
+    /** Add the implicit members for bean
+     *  to the symbol table.
+     */
+    private void addBeanMembers(JCClassDecl tree, Env<AttrContext> env) {
+	WildcardType wildcard = 
+	    new WildcardType(syms.objectType, BoundKind.UNBOUND, syms.boundClass);
+	ClassType propertyType =
+	    new ClassType(Type.noType, List.of(tree.sym.type, wildcard), syms.propertyType.tsym);
+
+	//
+        // public static Property<CurrentClass,?>[] properties();
+	//
+	MethodType mType = new MethodType(List.<Type>nil(), 
+		new ArrayType(propertyType, syms.arrayClass),
+		List.<Type>nil(),
+		syms.methodClass);
+	
+	MethodSymbol mSym = new MethodSymbol(Flags.PUBLIC|Flags.STATIC,
+		names.properties,
+		mType,
+		tree.sym);
+	
+        tree.sym.members().enter(mSym);
     }
 
     public void visitTopLevel(JCCompilationUnit tree) {
@@ -633,6 +660,128 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
         }
         annotateLater(tree.mods.annotations, localEnv, v);
         v.pos = tree.pos;
+    }
+    
+    @Override
+    public void visitPropertyDef(JCPropertyDecl tree) {
+	      Env<AttrContext> localEnv = env;
+        if ((tree.mods.flags & STATIC) != 0 ||
+            (env.info.scope.owner.flags() & INTERFACE) != 0) {
+            localEnv = env.dup(tree, env.info.dup());
+            localEnv.info.staticLevel++;
+        }
+        attr.attribType(tree.proptype, localEnv);
+        
+        Scope enclScope = enter.enterScope(env);
+        
+        PropertySymbol v =
+            new PropertySymbol(0, tree.name, tree.proptype.type, enclScope.owner);
+        v.flags_field = chk.checkFlags(tree.pos(), tree.mods.flags, v, tree);
+        tree.sym = v;
+        
+        if (chk.checkUnique(tree.pos(), v, enclScope)) {
+            enclScope.enter(v);
+        }
+        annotateLater(tree.mods.annotations, localEnv, v);
+        v.pos = tree.pos;
+        
+        // set class as bean
+        localEnv.enclClass.sym.flags_field |= BEAN;
+        
+        // create getter and setter if needed
+        if ((tree.styles & JCPropertyDecl.SETTER_ONLY) == 0) {
+          visitPropertyGetterDef(tree, tree.proptype.type);
+        }
+        if ((tree.styles & JCPropertyDecl.GETTER_ONLY) == 0) {
+          visitPropertySetterDef(tree, tree.proptype.type);
+        }
+        
+        // create property litteral
+        visitPropertyLitteral(tree);
+    }
+    
+    private void visitPropertyGetterDef(JCPropertyDecl tree, Type type) {
+	MethodSymbol getter;
+	if ((tree.styles & (JCPropertyDecl.SYNTHETIZED)) != 0) {
+	    // generate only a method symbol
+	    // body will be generated during Lower phase
+	    getter =new MethodSymbol(PUBLIC,
+		    toAccessorName("get", tree.name),
+		    new MethodType(List.<Type>nil(),
+			    type,
+			    List.<Type>nil(),
+			    syms.methodClass),
+		    tree.sym.owner);
+	    tree.sym.owner.members().enter(getter);
+	} else {
+	    memberEnter(tree.getter, env);
+	    env.enclClass.defs = env.enclClass.defs.append(tree.getter);
+	    getter = tree.getter.sym;
+	}
+	
+	// mark method symbol as getter
+        getter.flags_field |= PROPERTY_SETTER;
+        getter.property = tree.sym;
+        
+	tree.sym.getter = getter;
+    }
+    
+    private void visitPropertySetterDef(JCPropertyDecl tree, Type type) {
+	MethodSymbol setter;
+	if ((tree.styles & (JCPropertyDecl.SYNTHETIZED)) != 0) {
+	    // generate only a method symbol
+	    // body will be generated during Lower phase
+	    setter = new MethodSymbol(PUBLIC,
+		    toAccessorName("set", tree.name),
+		    new MethodType(List.of(type),
+			    syms.voidType,
+			    List.<Type>nil(),
+			    syms.methodClass),
+		    tree.sym.owner);
+	    setter.params = List.of(
+		    new VarSymbol(0, names.fromString("param"), type, setter));
+	    tree.sym.owner.members().enter(setter);
+	} else {
+	    memberEnter(tree.setter, env);
+	    env.enclClass.defs = env.enclClass.defs.append(tree.setter);
+	    setter = tree.setter.sym;
+	}
+	
+	// mark method symbol as setter
+        setter.flags_field |= PROPERTY_SETTER;
+        setter.property = tree.sym;
+        
+        tree.sym.setter = setter;
+    }
+    
+    private Name toAccessorName(String prefix, Name name) {
+	 String text = name.toString();
+	 text = prefix + Character.toUpperCase(text.charAt(0)) + text.substring(1);
+	 return Name.fromString(names, text);
+    }
+    
+    private void visitPropertyLitteral(JCPropertyDecl tree) {
+	Type boxedType = (tree.sym.type.isPrimitive()) ? 
+		types.boxedClass(tree.sym.type).type : tree.sym.type;
+	ClassType propertyType =
+	    new ClassType(Type.noType,
+		    List.of(env.enclClass.sym.type, boxedType),
+		    syms.propertyType.tsym);
+	//
+	// public static propertyType tree.name()
+	//
+	JCMethodDecl method = make.at(tree.pos).MethodDef(
+		make.Modifiers(PUBLIC|STATIC),
+		tree.name,
+		make.Type(propertyType), 
+		List.<JCTypeParameter>nil(),
+		List.<JCVariableDecl>nil(), 
+		List.<JCExpression>nil(),
+		null,
+		null);
+	memberEnter(method, env);
+	
+	tree.sym.literal = method.sym;
     }
 
     /** Create a fresh environment for a variable's initializer.

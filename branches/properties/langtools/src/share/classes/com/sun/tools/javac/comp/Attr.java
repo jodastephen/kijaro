@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 import javax.lang.model.element.ElementKind;
 import javax.tools.JavaFileObject;
 
@@ -730,6 +729,50 @@ public class Attr extends JCTree.Visitor {
                     v.pos = tree.pos;
                 }
             }
+            result = tree.type = v.type;
+            chk.validateAnnotations(tree.mods.annotations, v);
+        }
+        finally {
+            chk.setLint(prevLint);
+        }
+    }
+    
+    @Override
+    public void visitPropertyDef(JCPropertyDecl tree) {
+        // Check that the property's declared type is well-formed.
+        chk.validate(tree.proptype);
+        
+        PropertySymbol v = tree.sym;
+        
+        // verify setter parameter type
+        if ((tree.styles & (JCPropertyDecl.GETTER_ONLY|JCPropertyDecl.SYNTHETIZED)) == 0) {
+            if (!types.isSameType(v.type, tree.setter.sym.params.head.type)) {
+        	log.error(tree.setter.pos(), "property.invalid.setter.type", 
+        		tree.setter.sym.params.head.type, v.type, tree.name);
+            }
+        }
+        
+        // if synthetized and bound verifies that a propertyChanged method exists
+        if ((tree.styles & (JCPropertyDecl.BOUND|JCPropertyDecl.SYNTHETIZED)) != 0) {
+            MethodSymbol msym = new MethodSymbol(0, names.propertyChanged, 
+        	    new MethodType(
+        		    List.<Type>of(syms.propertyType, syms.objectType, syms.objectType),
+        		    syms.voidType,
+        		    List.<Type>nil(),
+        		    syms.methodClass),
+            	    v.owner);
+            //FIXME Remi must be verified
+            MethodSymbol ms = msym.implementation((ClassSymbol)v.owner, types, true);
+            
+        }
+        
+        // validate annotations
+        Lint lint = env.info.lint.augment(v.attributes_field, v.flags());
+        Lint prevLint = chk.setLint(lint);
+
+        try {
+            chk.checkDeprecatedAnnotation(tree.pos(), v);
+            
             result = tree.type = v.type;
             chk.validateAnnotations(tree.mods.annotations, v);
         }
@@ -1825,6 +1868,43 @@ public class Attr extends JCTree.Visitor {
                 env1 = env1.outer;
         }
         result = checkId(tree, env1.enclClass.sym.type, sym, env, pkind, pt, varArgs);
+    }
+    
+    public void visitSharp(JCSharpAccess tree) {
+        // Attribute the qualifier expression, and determine its type.
+        Type site = attribTree(tree.selected, env, TYP, Infer.anyPoly);
+        // capture access
+        site = capture(site);
+
+        // If qualifier symbol is a type or `super', assert `selectSuper'
+        // for the selection. This is relevant for determining whether
+        // protected symbols are accessible.
+        Symbol sitesym = TreeInfo.symbol(tree.selected);
+        
+        Symbol sym = rs.findField(env, site, tree.name, site.tsym);
+        
+        // must be accessed by a type
+        if (!isType(sitesym))
+            log.error(tree.pos(), "property.access.by.type", sym);
+        
+        // sharp must reference a property symbol
+        //FIXME Remi
+        if (!(sym instanceof PropertySymbol))
+            log.error(tree.pos(), "property.access.bad.ref", sym);
+        
+        // sharp access is not a variable but a value
+        if (pkind == VAR)
+            log.error(tree.pos(), "property.access.not.var", sym);
+        
+        tree.sym = (PropertySymbol)sym;
+
+        Type boxedType = (sym.type.isPrimitive()) ? 
+		types.boxedClass(sym.type).type : sym.type;
+		
+	result = tree.type =
+	    new ClassType(Type.noType,
+		    List.of(sym.owner.type, boxedType),
+		    syms.propertyType.tsym);
     }
 
     public void visitSelect(JCFieldAccess tree) {

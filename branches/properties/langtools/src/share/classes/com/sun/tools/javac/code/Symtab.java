@@ -142,6 +142,8 @@ public class Symtab {
     public final Type retentionType;
     public final Type deprecatedType;
     public final Type suppressWarningsType;
+    public final Type propertyType;
+    public final Type unsupportedOperationExceptionType;
     public final Type inheritedType;
     public final Type proprietaryType;
 
@@ -383,6 +385,8 @@ public class Symtab {
         deprecatedType = enterClass("java.lang.Deprecated");
         suppressWarningsType = enterClass("java.lang.SuppressWarnings");
         inheritedType = enterClass("java.lang.annotation.Inherited");
+	      propertyType = enterClass("java.lang.Property");
+	      unsupportedOperationExceptionType = enterClass("java.lang.UnsupportedOperationException");
 
         // Enter a synthetic class that is used to mark Sun
         // proprietary classes in ct.sym.  This class does not have a

@@ -129,6 +129,11 @@ public interface Tree {
          * Used for instances of {@link MemberSelectTree}.
          */
         MEMBER_SELECT(MemberSelectTree.class),
+        
+        /**
+         * Used for instances of {@link SharpSelectTree}.
+         */
+        SHARP_SELECT(SharpSelectTree.class),
 
         /**
          * Used for instances of {@link ForLoopTree}.
@@ -194,6 +199,11 @@ public interface Tree {
          * Used for instances of {@link PrimitiveTypeTree}.
          */
         PRIMITIVE_TYPE(PrimitiveTypeTree.class),
+        
+        /**
+         * Used for instances of {@link PropertyTree}.
+         */
+        PROPERTY(PropertyTree.class),
 
         /**
          * Used for instances of {@link ReturnTree}.

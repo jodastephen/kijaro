@@ -131,9 +131,19 @@ public interface Lexer {
     String stringVal();
 
     /**
-     * Return the current token, set by nextToken().
+     * Return the current token, set by nextToken(),
+     * Convert local tokens to identifiers.
+     * 
+     * @see #localToken()
      */
     Token token();
+    
+    /** Return the current token, set by nextToken(),
+     *  Local tokens are returned without conversion.
+     *  
+     *  @see Token#isLocal()
+     */
+    Token localToken();
 
     /**
      * Sets the current token.
