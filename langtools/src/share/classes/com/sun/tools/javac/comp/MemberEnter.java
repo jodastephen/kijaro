@@ -415,8 +415,7 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
     /** Enter members for a class.
      */
     void finishClass(JCClassDecl tree, Env<AttrContext> env) {
-        if ((tree.mods.flags & Flags.ENUM) != 0 &&
-            (types.supertype(tree.sym.type).tsym.flags() & Flags.ENUM) == 0) {
+        if (tree.sym.isDeclaredEnum()) {
             addEnumMembers(tree, env);
         }
         memberEnter(tree.defs, env);
@@ -841,16 +840,50 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
             // create an environment for evaluating the base clauses
             Env<AttrContext> baseEnv = baseEnv(tree, env);
 
+            TypeSymbol enumTypeSymbol = c;
+            if (tree.sym.isAbstractEnum() && !target.compilerBootstrap(c)) {
+                // Abstract Enum should always add $Enum type variable
+                // representing the final enum so after parsing it will look like
+                // public abstract enum AE1<$Enum> extends java.lang.Enum<$Enum>
+                JCTypeParameter typeParameter = make.TypeParameter(names.TypeParamEnum,
+                        List.<JCExpression>nil());
+                tree.typarams = tree.typarams.prepend(typeParameter);
+                ct.typarams_field = ct.typarams_field.prepend(enter.classEnter(typeParameter, env));
+                enumTypeSymbol = ct.typarams_field.head.tsym;
+                assert ct.typarams_field.head.tsym.name == names.TypeParamEnum;
+            }
+
             // Determine supertype.
-            Type supertype =
-                (tree.extending != null)
-                ? attr.attribBase(tree.extending, baseEnv, true, false, true)
-                : ((tree.mods.flags & Flags.ENUM) != 0 && !target.compilerBootstrap(c))
-                ? attr.attribBase(enumBase(tree.pos, c), baseEnv,
-                                  true, false, false)
-                : (c.fullname == names.java_lang_Object)
-                ? Type.noType
-                : syms.objectType;
+            Type supertype;
+            if ((tree.extending != null)) {
+                if (((tree.mods.flags & Flags.ENUM) != 0 &&
+                        !tree.name.isEmpty() &&
+                        !target.compilerBootstrap(c))) {
+                    JCExpression typeArgs;
+                    if (tree.sym.isAbstractEnum()) {
+                        typeArgs = make.Ident(enumTypeSymbol);
+                    } else {
+                        typeArgs = make.Type(c.type);
+                    }
+                    if (tree.extending.getTag() == JCTree.TYPEAPPLY) {
+                        JCTypeApply jcTypeApply = (JCTypeApply) tree.extending;
+                        jcTypeApply.arguments = jcTypeApply.arguments.prepend(typeArgs);
+                    } else {
+                        tree.extending = make.TypeApply(
+                                (JCExpression) tree.extending, List.<JCExpression>of(typeArgs));
+                    }
+                }
+                supertype = attr.attribBase(tree.extending, baseEnv, true, false, true);
+            } else {
+                if (((tree.mods.flags & Flags.ENUM) != 0 && !target.compilerBootstrap(c))) {
+                    supertype = attr.attribBase(enumBase(tree.pos, enumTypeSymbol), baseEnv,
+                            true, false, false);
+                } else {
+                    supertype = (c.fullname == names.java_lang_Object)
+                            ? Type.noType
+                            : syms.objectType;
+                }
+            }
             ct.supertype_field = supertype;
 
             // Determine interfaces.
@@ -1012,9 +1045,9 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
 
     /** Generate a base clause for an enum type.
      *  @param pos              The position for trees and diagnostics, if any
-     *  @param c                The class symbol of the enum
+     *  @param c                The class symbol of the enum or the type symbol of $Enum
      */
-    private JCExpression enumBase(int pos, ClassSymbol c) {
+    private JCExpression enumBase(int pos, TypeSymbol c) {
         JCExpression result = make.at(pos).
             TypeApply(make.QualIdent(syms.enumSym),
                       List.<JCExpression>of(make.Type(c.type)));
@@ -1055,11 +1088,14 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
         List<JCStatement> stats = List.nil();
         if (c.type != syms.objectType)
             stats = stats.prepend(SuperCall(make, typarams, params, based));
-        if ((c.flags() & ENUM) != 0 &&
-            (types.supertype(c.type).tsym == syms.enumSym ||
-             target.compilerBootstrap(c))) {
-            // constructors of true enums are private
-            flags = (flags & ~AccessFlags) | PRIVATE | GENERATEDCONSTR;
+        if ((c.flags() & ENUM) != 0) {
+            if (c.isAbstractEnum()) {
+                // constructors of abstract enums are protected
+                flags = (flags & ~AccessFlags) | PROTECTED | GENERATEDCONSTR;
+            } else {
+                // constructors of true enums are private
+                flags = (flags & ~AccessFlags) | PRIVATE | GENERATEDCONSTR;
+            }
         } else
             flags |= (c.flags() & AccessFlags) | GENERATEDCONSTR;
         if (c.name.len == 0) flags |= ANONCONSTR;

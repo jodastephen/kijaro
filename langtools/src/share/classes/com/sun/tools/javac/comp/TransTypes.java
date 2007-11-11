@@ -572,9 +572,18 @@ public class TransTypes extends TreeTranslator {
         Type mt = meth.erasure(types);
         List<Type> argtypes = mt.getParameterTypes();
         if (allowEnums &&
-            meth.name==names.init &&
-            meth.owner == syms.enumSym)
-            argtypes = argtypes.tail.tail;
+            meth.name==names.init) {
+            if (meth.owner == syms.enumSym) {
+                argtypes = argtypes.tail.tail;
+            } else if (meth.owner.isAbstractEnum()) {
+                if ((meth.flags() & PROTECTED) != 0) {
+                    // Only declared abstract enum have protected constructors
+                    // name, ordinal were added to the constructor
+                    // so we should remove them for signature vision
+                    argtypes = argtypes.tail.tail;
+                }
+            }
+        }
         if (tree.varargsElement != null)
             tree.varargsElement = types.erasure(tree.varargsElement);
         else

@@ -1,0 +1,4 @@
+AEException3.java:36: call to super not allowed in enum constructor
+        super();
+        ^
+1 error

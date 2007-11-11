@@ -585,11 +585,19 @@ public class Check {
         case MTH:
             if (sym.name == names.init) {
                 if ((sym.owner.flags_field & ENUM) != 0) {
-                    // enum constructors cannot be declared public or
-                    // protected and must be implicitly or explicitly
-                    // private
-                    implicit = PRIVATE;
-                    mask = PRIVATE;
+                    if (sym.owner.isAbstractEnum()) {
+                        // abstract enum constructors cannot be declared public
+                        // or private and must be implicitly or explicitly
+                        // protected
+                        implicit = PROTECTED;
+                        mask = PROTECTED;
+                    } else {
+                        // enum constructors cannot be declared public or
+                        // protected and must be implicitly or explicitly
+                        // private
+                        implicit = PRIVATE;
+                        mask = PRIVATE;
+                    }
                 } else
                     mask = ConstructorFlags;
             }  else if ((sym.owner.flags_field & INTERFACE) != 0)
@@ -630,9 +638,11 @@ public class Check {
             if ((flags & INTERFACE) != 0) implicit |= ABSTRACT;
 
             if ((flags & ENUM) != 0) {
-                // enums can't be declared abstract or final
-                mask &= ~(ABSTRACT | FINAL);
-                implicit |= implicitEnumFinalFlag(tree);
+                // enums can't be declared final
+                mask &= ~(FINAL);
+                if ((flags & ABSTRACT) == 0) {
+                    implicit |= implicitEnumFinalFlag(tree);
+                }
             }
             // Imply STRICTFP if owner has STRICTFP set.
             implicit |= sym.owner.flags_field & STRICTFP;
@@ -1407,11 +1417,11 @@ public class Check {
         try {
             MethodSymbol undef = firstUndef(c, c);
             if (undef != null) {
-                if ((c.flags() & ENUM) != 0 &&
-                    types.supertype(c.type).tsym == syms.enumSym &&
-                    (c.flags() & FINAL) == 0) {
-                    // add the ABSTRACT flag to an enum
-                    c.flags_field |= ABSTRACT;
+                if (c.isDeclaredEnum() &&
+                        (c.flags() & FINAL) == 0) {
+                    // add the SYNTHETIC ABSTRACT flag to an enum
+                    // which was not declared abstract but has anonymous constants declaration
+                    c.flags_field |= ABSTRACT & SYNTHETIC_ABSTRACT;
                 } else {
                     MethodSymbol undef1 =
                         new MethodSymbol(undef.flags(), undef.name,

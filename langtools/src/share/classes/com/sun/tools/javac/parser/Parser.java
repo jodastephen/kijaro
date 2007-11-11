@@ -2324,18 +2324,31 @@ public class Parser {
         accept(ENUM);
         Name name = ident();
 
+        // Support for generics in enums
+        List<JCTypeParameter> typarams = typeParametersOpt();
+
+        JCTree extending = null;
+        if (S.token() == EXTENDS) {
+            S.nextToken();
+            extending = type();
+        }
+
         List<JCExpression> implementing = List.nil();
         if (S.token() == IMPLEMENTS) {
             S.nextToken();
             implementing = typeList();
         }
-
-        List<JCTree> defs = enumBody(name);
+        List<JCTree> defs;
+        if ((mods.flags & Flags.ABSTRACT) != 0) {
+            defs = classOrInterfaceBody(name, false);
+        } else {
+            defs = enumBody(name);
+        }
         JCModifiers newMods =
             F.at(mods.pos).Modifiers(mods.flags|Flags.ENUM, mods.annotations);
         JCClassDecl result = toP(F.at(pos).
-            ClassDef(newMods, name, List.<JCTypeParameter>nil(),
-                null, implementing, defs));
+            ClassDef(newMods, name, typarams,
+                extending, implementing, defs));
         attach(result, dc);
         return result;
     }

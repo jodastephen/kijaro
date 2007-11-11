@@ -217,6 +217,11 @@ public class Flags {
      */
     public static final long PROPRIETARY = 1L<<38;
 
+    /**
+     * Flag set when abstract flag is synthetic
+     */
+    public static final long SYNTHETIC_ABSTRACT    = 1<<39;
+
     /** Modifier masks.
      */
     public static final int

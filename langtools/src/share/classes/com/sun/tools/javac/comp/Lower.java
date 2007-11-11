@@ -1997,8 +1997,7 @@ public class Lower extends TreeTranslator {
         List<VarSymbol> prevOuterThisStack = outerThisStack;
 
         // If this is an enum definition
-        if ((tree.mods.flags & ENUM) != 0 &&
-            (types.supertype(currentClass.type).tsym.flags() & ENUM) == 0)
+        if (currentClass.isDeclaredEnum())
             visitEnumDef(tree);
 
         // If this is a nested class, define a this$n field for

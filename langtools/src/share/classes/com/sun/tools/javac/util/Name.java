@@ -505,6 +505,7 @@ public class Name implements javax.lang.model.element.Name {
             next = fromString("next");
             AnnotationDefault = fromString("AnnotationDefault");
             ordinal = fromString("ordinal");
+            TypeParamEnum = fromString("$Enum");
             equals = fromString("equals");
             hashCode = fromString("hashCode");
             compareTo = fromString("compareTo");
@@ -639,6 +640,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name next;
         public final Name AnnotationDefault;
         public final Name ordinal;
+        public final Name TypeParamEnum;
         public final Name equals;
         public final Name hashCode;
         public final Name compareTo;
