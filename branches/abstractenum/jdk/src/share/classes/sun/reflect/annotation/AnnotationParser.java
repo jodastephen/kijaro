@@ -422,9 +422,12 @@ public class AnnotationParser {
             if (!enumType.getName().equals(typeName))
             return new AnnotationTypeMismatchExceptionProxy(
                 typeName + "." + constName);
-        } else if (enumType != parseSig(typeName, container)) {
-            return new AnnotationTypeMismatchExceptionProxy(
-                typeName + "." + constName);
+        } else {
+            Class paramEnumType = parseSig(typeName, container);
+            if (!enumType.isAssignableFrom(paramEnumType))
+                return new AnnotationTypeMismatchExceptionProxy(
+                    typeName + "." + constName);
+            enumType = paramEnumType;
         }
 
         try {

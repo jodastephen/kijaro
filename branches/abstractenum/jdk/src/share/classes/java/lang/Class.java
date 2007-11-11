@@ -2873,11 +2873,9 @@ public final
      * @since 1.5
      */
     public boolean isEnum() {
-        // An enum must both directly extend java.lang.Enum and have
-        // the ENUM bit set; classes for specialized enum constants
-        // don't do the former.
-        return (this.getModifiers() & ENUM) != 0 &&
-        this.getSuperclass() == java.lang.Enum.class;
+        // An enum must have the ENUM bit set and are not Anonymous.
+        // Classes for specialized enum constants don't do the former.
+        return ((this.getModifiers() & ENUM) != 0 && !isAnonymousClass());
     }
 
     // Fetches the factory for reflective objects
