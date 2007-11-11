@@ -1,0 +1,3 @@
+#!/bin/sh
+dir=`/usr/bin/dirname $0` 
+java -Xbootclasspath/p:$dir/../langtools/dist/lib/classes.jar $@
