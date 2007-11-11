@@ -665,9 +665,11 @@ public class Attr extends JCTree.Visitor {
                                                           false));
                     } else if ((env.enclClass.sym.flags() & ENUM) != 0 &&
                                (tree.mods.flags & GENERATEDCONSTR) == 0 &&
+                               (!types.supertype(env.enclClass.type).tsym.isAbstractEnum()) &&
                                TreeInfo.isSuperCall(body.stats.head)) {
                         // enum constructors are not allowed to call super
-                        // directly, so make sure there aren't any super calls
+                        // directly, except if the supertype is an abstract enum
+                        // so make sure there aren't any super calls
                         // in enum constructors, except in the compiler
                         // generated one.
                         log.error(tree.body.stats.head.pos(),
@@ -841,6 +843,12 @@ public class Attr extends JCTree.Visitor {
         boolean enumSwitch =
             allowEnums &&
             (seltype.tsym.flags() & Flags.ENUM) != 0;
+        if (enumSwitch && seltype.tsym.isAbstractEnum()) {
+//        if (enumSwitch && hasProtectedConstructor(seltype)) {
+            // TODO: Should throw a nice message about switch on abstract enum forbidden
+            // For the moment let the check type fails
+            enumSwitch = false;
+        }
         if (!enumSwitch)
             seltype = chk.checkType(tree.selector.pos(), seltype, syms.intType);
 
@@ -2652,6 +2660,7 @@ public class Attr extends JCTree.Visitor {
 
             try {
                 // java.lang.Enum may not be subclassed by a non-enum
+                // TODO: Check that enum are not declaring extend java.lang.Enum
                 if (st.tsym == syms.enumSym &&
                     ((c.flags_field & (Flags.ENUM|Flags.COMPOUND)) == 0))
                     log.error(env.tree.pos(), "enum.no.subclassing");
@@ -2663,6 +2672,14 @@ public class Attr extends JCTree.Visitor {
                     !target.compilerBootstrap(c)) {
                     log.error(env.tree.pos(), "enum.types.not.extensible");
                 }
+
+                // enums should only extend java.lang.Enum or abstract enum
+                // or be anonymous enum
+                if (st.tsym != null && (c.flags_field & Flags.ENUM) != 0 &&
+                        !(st.tsym.isAbstractEnum() || c.name.isEmpty()
+                        || st.tsym == syms.enumSym))
+                    log.error(env.tree.pos(), "enum.types.must.extend.enum");
+
                 attribClassBody(env, c);
 
                 chk.checkDeprecatedAnnotation(env.tree.pos(), c);

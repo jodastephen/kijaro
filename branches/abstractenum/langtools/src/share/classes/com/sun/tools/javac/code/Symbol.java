@@ -211,6 +211,20 @@ public abstract class Symbol implements Element {
             (owner.kind == TYP && owner.isLocal());
     }
 
+    /**
+     * @return true if it is a declared abstract enum class
+     */
+    public boolean isAbstractEnum() {
+        return false;
+    }
+
+    /**
+     * @return true if it is a declared enum class with enumerated values
+     */
+    public boolean isDeclaredEnum() {
+        return false;
+    }
+
     /** Is this symbol a constructor?
      */
     public boolean isConstructor() {
@@ -808,6 +822,22 @@ public abstract class Symbol implements Element {
             } else {
                 return Type.noType;
             }
+        }
+
+        /**
+         * No way in a symbol to seprate declared abstract enum from the one with anonymous inner classes.
+         * You need to check tree.mods if the source code is avaliable,
+         * or the fact that declared abstract have protected constructor,
+         * but for implicit abstract enum constructor are private.
+         */
+        public boolean isAbstractEnum() {
+            return (flags_field & ENUM) != 0 && !name.isEmpty() &&
+                    (flags_field & ABSTRACT) != 0 && (flags_field & SYNTHETIC_ABSTRACT) == 0;
+        }
+
+        public boolean isDeclaredEnum() {
+            return (flags_field & ENUM) != 0 && !name.isEmpty() &&
+                    ((flags_field & ABSTRACT) == 0 || (flags_field & SYNTHETIC_ABSTRACT) != 0);
         }
 
         public ElementKind getKind() {

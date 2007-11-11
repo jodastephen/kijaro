@@ -1502,6 +1502,10 @@ public class ClassReader extends ClassFile implements Completer {
         currentOwner = m;
         try {
             readMemberAttrs(m);
+            if (name == names.init && prevOwner.isAbstractEnum()) {
+                // Abstract enum constructor have name and ordinal only in their erasure field
+                m.erasure_field = type;
+            }
         } finally {
             currentOwner = prevOwner;
         }
