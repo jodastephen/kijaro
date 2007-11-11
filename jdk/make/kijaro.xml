@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ This is the build file for the creating the modified version of the JDK: kijaro
+ -->
+<project name="kijaro" default="build" basedir="..">
+    <target name="init">
+        <property name="javac.classes" value="../langtools/build/classes"/>
+        <property name="javac.target" value="6"/>
+        <property name="build.dir" value="build"/>
+        <property name="dist.dir" value="dist"/>
+        <property name="build.classes.dir" value="${build.dir}/classes"/>
+        <property name="dist.lib.dir" value="${dist.dir}/lib"/>
+    </target>
+
+    <target name="build" depends="init">
+        <mkdir dir="${build.classes.dir}"/>
+        <javac fork="true"
+               srcdir="src/share/classes"
+               destdir="${build.classes.dir}"
+               sourcepath=""
+               includeAntRuntime="no"
+               target="6">
+            <compilerarg value="-J-Xbootclasspath/p:${javac.classes}"/>
+            <compilerarg line="-Xlint"/>
+            <compilerarg line="-nowarn"/>
+        </javac>
+        <mkdir dir="${dist.lib.dir}"/>
+        <jar file="${dist.lib.dir}/kijaro.jar" basedir="${build.classes.dir}"/>
+    </target>
+
+    <target name="clean" depends="init">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+</project>
+
