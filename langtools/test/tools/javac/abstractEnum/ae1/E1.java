@@ -30,10 +30,6 @@ public enum E1 extends AE1<E1> {
 public enum E1 extends AE1 {
     one(1), two;
 
-    E1() {
-    }
-
-    E1(int pi) {
-        super(pi);
-    }
+    E1() {}
+    E1(int pi) {super(pi);}
 }

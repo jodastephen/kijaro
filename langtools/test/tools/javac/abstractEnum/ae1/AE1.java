@@ -29,17 +29,8 @@ public abstract enum AE1<E$0> extends java.lang.Enum<E$0> {
 */
 public abstract enum AE1 {
     int i;
-
-    AE1() {
-        i = 2;
-    }
-
-    AE1(int pi) {
-        i = pi;
-    }
-
-    public int getI() {
-        return i;
-    }
+    AE1() {i = 2;}
+    AE1(int pi) {i = pi;}
+    public int getI() {return i;}
 }
 

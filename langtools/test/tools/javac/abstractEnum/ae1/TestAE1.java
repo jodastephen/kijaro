@@ -31,7 +31,7 @@ package abstractEnum.ae1;
  * @author freds
  * @test @(#)TestAE1.java 1.7 08/06/07
  * @bug 6507006
- * @summary support for abstract enum
+ * @summary basic test for abstract enum support
  * @library ../..
  * @compile AE1.java E1.java TestAE1.java
  * @run main abstractEnum.ae1.TestAE1
@@ -42,6 +42,6 @@ public class TestAE1 {
     public static void main(String[] args) {
         TestAE1 t = new TestAE1();
         t.ae1 = E1.one;
-        System.out.println("Youpi " + t.ae1.getI());
+        assert 1 == t.ae1.getI();
     }
 }
