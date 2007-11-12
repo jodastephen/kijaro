@@ -30,7 +30,7 @@ package abstractEnum.ae3;
  *
  * @test @(#)AE3.java 1.7 08/06/07
  * @bug 6507006
- * @summary support for abstract enum
+ * @summary Overloaded super constructor in abstract enum
  * @author freds
  *
  * @library ../..
@@ -41,13 +41,12 @@ public class AE3 {
     AbstractE3 ae3;
 
     public static void main(String[] args) {
-        System.out.println("Before");
         AE3 t = new AE3();
         t.ae3 = E31.one;
-        System.out.println("Youpi " + t.ae3.f() + "  " + t.ae3.full());
+        assert 11 == t.ae3.f();
+        assert "eleven:0".equals(t.ae3.full());
         t.ae3 = E32.twenty2;
-        System.out.println("Youpi " + t.ae3.full());
-        System.out.println("After");
+        assert "coucou:0".equals(t.ae3.full());
     }
 }
 

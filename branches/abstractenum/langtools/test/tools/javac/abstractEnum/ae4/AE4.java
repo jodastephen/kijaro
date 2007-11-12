@@ -21,27 +21,27 @@
  * have any questions.
  *
  */
-package abstractEnum.ae2;
+package abstractEnum.ae4;
 
 /*
  * User: freds
  * Date: Jun 10, 2007
  * Time: 12:45:17 PM
  *
- * @test @(#)AE2.java 1.7 10/06/07
+ * @test @(#)AE4.java 1.7 10/06/07
  * @bug 6570766
- * @summary support generics in abstract enum
+ * @summary support untyped generics in abstract enum
  * @author freds
  *
  * @library ../..
- * @compile AE2.java
- * @run main abstractEnum.ae2.AE2
+ * @compile AE4.java
+ * @run main abstractEnum.ae4.AE4
  */
-public class AE2 {
-    AbstractE2 ae2;
+public class AE4 {
+    AbstractE4 ae2;
 
     public static void main(String[] args) {
-        AE2 t = new AE2();
+        AE4 t = new AE4();
         t.ae2 = E21.one;
         assert 0 == t.ae2.f();
         assert "one:0".equals(t.ae2.full());
@@ -52,7 +52,7 @@ public class AE2 {
         E21 e21 = E21.one;
         switch (e21) {
             case one:
-                System.out.println("Got 1");
+                System.out.println("Got 1 ");
                 break;
             case two:
                 assert false;
@@ -61,10 +61,11 @@ public class AE2 {
     }
 }
 
-abstract enum AbstractE2<T> {
-    public int f() {
-        return ordinal();
-    }
+abstract enum AbstractE4<T,V> {
+    public V f() {
+        // Bug to solve about E21 not being abstract
+        return null;
+   }
 
     public String full() {
         return name() + ":" + ordinal();
@@ -73,18 +74,32 @@ abstract enum AbstractE2<T> {
     public abstract T get();
 }
 
-enum E21 extends AbstractE2<String> {
-    one, two;
+enum E21<V> extends AbstractE4<String,V> {
+    <Short> one {
+        public Short f() {
+            return new Short((short)11);
+        }},
+    <Long> two {
+        public Long f() {
+            return new Long(22);
+        }};
+
     public String get() {
         return "E21";
     }
 }
 
-enum E22 extends AbstractE2<Integer> {
+enum E22 extends AbstractE4<Integer,Integer> {
     twenty2, twenty3;
 
     public Integer get() {
-        return 22;
+        if (this == twenty2)
+            return 22;
+        return 23;
+    }
+
+    protected Object innerF() {
+        return get();
     }
 }
 

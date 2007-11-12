@@ -40,18 +40,20 @@ public class AnnoAEUsage {
     private String first;
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Is enum " + E21.class.isEnum());
+        assert !Enum.class.isEnum();
+        assert AbstractE2.class.isEnum();
+        assert E21.class.isEnum();
         E21 e21 = Enum.valueOf(E21.class, "one");
         switch (e21) {
             case one:
-                System.out.println("Got 1");
+                System.out.println("Got 1 ");
                 break;
             default:
-                System.err.println("No got 1");
+                assert false;
         }
         Field field = AnnoAEUsage.class.getDeclaredField("first");
         AnnoAETest anno = field.getAnnotation(AnnoAETest.class);
         AbstractE2 ae2 = anno.ae2();
-        System.out.println("Youpi again " + ae2.full());
+        assert "one:0".equals(ae2.full());
     }
 }

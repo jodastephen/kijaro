@@ -2403,6 +2403,7 @@ public class Parser {
         int pos = S.pos();
         List<JCAnnotation> annotations = annotationsOpt();
         JCModifiers mods = F.at(annotations.isEmpty() ? Position.NOPOS : pos).Modifiers(flags, annotations);
+        mode = TYPE;
         List<JCExpression> typeArgs = typeArgumentsOpt();
         int identPos = S.pos();
         Name name = ident();
