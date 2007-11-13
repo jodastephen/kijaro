@@ -36,6 +36,7 @@ import com.sun.tools.javac.tree.JCTree.*;
 import static com.sun.tools.javac.code.Flags.*;
 import static com.sun.tools.javac.code.Kinds.*;
 import static com.sun.tools.javac.code.TypeTags.*;
+import java.util.EnumSet;
 
 /** Factory class for trees.
  *
@@ -185,6 +186,17 @@ public class TreeMaker implements JCTree.Factory {
 
     public JCVariableDecl VarDef(JCModifiers mods, Name name, JCExpression vartype, JCExpression init) {
         JCVariableDecl tree = new JCVariableDecl(mods, name, vartype, init, null);
+        tree.pos = pos;
+        return tree;
+    }
+    
+    public JCPropertyDecl PropertyDef(JCModifiers mods,
+                                      Name name,
+                                      JCExpression proptype,
+                                      int styles,
+                                      JCMethodDecl getter,
+                                      JCMethodDecl setter) {
+        JCPropertyDecl tree = new JCPropertyDecl(mods, name, proptype, styles, getter, setter);
         tree.pos = pos;
         return tree;
     }
@@ -395,6 +407,12 @@ public class TreeMaker implements JCTree.Factory {
 
     public JCFieldAccess Select(JCExpression selected, Name selector) {
         JCFieldAccess tree = new JCFieldAccess(selected, selector, null);
+        tree.pos = pos;
+        return tree;
+    }
+    
+    public JCSharpAccess Sharp(JCExpression selected, Name selector) {
+        JCSharpAccess tree = new JCSharpAccess(selected, selector);
         tree.pos = pos;
         return tree;
     }

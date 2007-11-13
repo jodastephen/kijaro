@@ -630,7 +630,7 @@
             <attribute name="jdk" default="${target.java.home}"/>
             <attribute name="samevm" default="false"/>
             <attribute name="verbose" default="summary"/>
-            <attribute name="options" default=""/>
+            <attribute name="options" default="${jtreg.options}"/>
             <attribute name="keywords" default="-keywords:!ignore"/>
             <attribute name="jpda.jvmargs" default=""/>
             <sequential>

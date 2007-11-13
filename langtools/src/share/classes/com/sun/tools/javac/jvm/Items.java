@@ -150,6 +150,15 @@ public class Items {
         return new MemberItem(member, nonvirtual);
     }
 
+    /** Make an item representing a property.
+     *  @param property     The property symbol.
+     *  @param nonvirtual   Is the reference not virtual? (true for constructors
+     *                      and private members).
+     */
+    Item makePropertyItem(PropertySymbol property, boolean nonvirtual) {
+        return new PropertyItem(property, nonvirtual);
+    }
+    
     /** Make an item representing a literal.
      *  @param type     The literal's type.
      *  @param value    The literal's value.
@@ -519,6 +528,81 @@ public class Items {
 
         public String toString() {
             return "member(" + member + (nonvirtual ? " nonvirtual)" : ")");
+        }
+    }
+    
+    /** An item representing a property variable.
+     */
+    class PropertyItem extends Item {
+
+        /**
+         * The represented symbol.
+         */
+        PropertySymbol member;
+
+        /**
+         * Flag that determines whether or not access is virtual.
+         */
+        boolean nonvirtual;
+
+        PropertyItem(PropertySymbol member, boolean nonvirtual) {
+            super(Code.typecode(member.erasure(types)));
+            this.member = member;
+            this.nonvirtual = nonvirtual;
+        }
+
+        Item load() {
+            MethodSymbol getter = member.getter;
+            MethodType mtype = (MethodType) getter.erasure(types);
+            int rescode = Code.typecode(mtype.restype);
+            if ((member.owner.flags() & Flags.INTERFACE) != 0) {
+                code.emitInvokeinterface(pool.put(getter), mtype);
+            } else if ((member.flags() & Flags.STATIC) != 0) {
+                code.emitInvokestatic(pool.put(getter), mtype);
+            } else if (nonvirtual) {
+                code.emitInvokespecial(pool.put(getter), mtype);
+            } else {
+                code.emitInvokevirtual(pool.put(getter), mtype);
+            }
+            return stackItem[rescode];
+        }
+
+        void store() {
+            MethodSymbol setter = member.setter;
+            MethodType mtype = (MethodType) setter.erasure(types);
+            if ((member.owner.flags() & Flags.INTERFACE) != 0) {
+                code.emitInvokeinterface(pool.put(setter), mtype);
+            } else if ((member.flags() & Flags.STATIC) != 0) {
+                code.emitInvokestatic(pool.put(setter), mtype);
+            } else if (nonvirtual) {
+                code.emitInvokespecial(pool.put(setter), mtype);
+            } else {
+                code.emitInvokevirtual(pool.put(setter), mtype);
+            }
+        }
+
+        Item invoke() {
+            throw new AssertionError();
+        }
+
+        void duplicate() {
+            stackItem[OBJECTcode].duplicate();
+        }
+
+        void drop() {
+            stackItem[OBJECTcode].drop();
+        }
+
+        void stash(int toscode) {
+            stackItem[OBJECTcode].stash(toscode);
+        }
+
+        int width() {
+            return 1;
+        }
+
+        public String toString() {
+            return "property(" + member + (nonvirtual ? " nonvirtual)" : ")");
         }
     }
 

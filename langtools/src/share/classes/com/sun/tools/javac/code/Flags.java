@@ -217,10 +217,26 @@ public class Flags {
      */
     public static final long PROPRIETARY = 1L<<38;
 
+    /** Flag that marks a property
+     */
+    public static final long PROPERTY = 1L<<39;
+
+    /** Flag that marks a property getter
+     */
+    public static final long PROPERTY_GETTER = 1L<<40;
+
+    /** Flag that marks a property setter
+     */
+    public static final long PROPERTY_SETTER = 1L<<41;
+
+    /** Flag that marks a class that defined property
+     */
+    public static final long BEAN = 1L<<42;
+
     /**
      * Flag set when abstract flag is synthetic
      */
-    public static final long SYNTHETIC_ABSTRACT    = 1<<39;
+    public static final long SYNTHETIC_ABSTRACT = 1<<43;
 
     /** Modifier masks.
      */

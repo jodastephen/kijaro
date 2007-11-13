@@ -503,6 +503,53 @@ public class Pretty extends JCTree.Visitor {
             throw new UncheckedIOException(e);
         }
     }
+    
+    @Override
+    public void visitPropertyDef(JCPropertyDecl tree) {
+        try {
+            if (docComments != null && docComments.get(tree) != null) {
+                println();
+                align();
+            }
+            printDocComment(tree);
+            printExpr(tree.mods);
+            print("property ");
+            if ((tree.mods.flags & VARARGS) != 0) {
+                printExpr(((JCArrayTypeTree) tree.proptype).elemtype);
+                print("... " + tree.name);
+            } else {
+                printExpr(tree.proptype);
+                print(" " + tree.name);
+            }
+            int styles = tree.styles;
+            if ((styles & JCPropertyDecl.BOUND) != 0) {
+                print(" bound ");
+            }
+            if ((styles & JCPropertyDecl.SYNTHETIZED) != 0) {
+                if ((styles & JCPropertyDecl.SETTER_ONLY) != 0) {
+                    print("set");
+                } else {
+                    if ((styles & JCPropertyDecl.GETTER_ONLY) != 0) {
+                        print("get");
+                    }
+                }
+            } else {
+                if ((styles & JCPropertyDecl.SETTER_ONLY) == 0) {
+                    print("get ");
+                    printStat(tree.getter.body);
+                }
+                if ((styles & JCPropertyDecl.GETTER_ONLY) == 0) {
+                    print("set (");
+                    printExprs(tree.setter.params);
+                    print(") ");
+                    printStat(tree.setter.body);
+                }
+            }
+            print(";");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 
     public void visitSkip(JCSkip tree) {
         try {
@@ -1014,6 +1061,16 @@ public class Pretty extends JCTree.Visitor {
         try {
             printExpr(tree.selected, TreeInfo.postfixPrec);
             print("." + tree.name);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+    
+    public void visitSharp(JCSharpAccess tree) {
+        try {
+            //FIXME Remi, is TreeInfo.postfixPrec needed ?
+            printExpr(tree.selected, TreeInfo.postfixPrec);
+            print("#" + tree.name);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

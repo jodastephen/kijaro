@@ -150,6 +150,14 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return r;
     }
 
+    public R visitProperty(PropertyTree node, P p) {
+        R r = scan(node.getModifiers(), p);
+        r = scanAndReduce(node.getType(), p, r);
+        r = scanAndReduce(node.getGetter().getBody(), p, r);
+        r = scanAndReduce(node.getSetter().getBody(), p, r);
+        return r;
+    }
+
     public R visitEmptyStatement(EmptyStatementTree node, P p) {
         return null;
     }
@@ -328,6 +336,10 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
     }
 
     public R visitMemberSelect(MemberSelectTree node, P p) {
+        return scan(node.getExpression(), p);
+    }
+    
+    public R visitSharpSelect(SharpSelectTree node, P p) {
         return scan(node.getExpression(), p);
     }
 

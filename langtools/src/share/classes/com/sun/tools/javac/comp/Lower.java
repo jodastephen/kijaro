@@ -78,6 +78,7 @@ public class Lower extends TreeTranslator {
     private Target target;
     private Source source;
     private boolean allowEnums;
+    private final boolean allowProperty;
     private final Name dollarAssertionsDisabled;
     private final Name classDollar;
     private Types types;
@@ -98,8 +99,10 @@ public class Lower extends TreeTranslator {
         target = Target.instance(context);
         source = Source.instance(context);
         allowEnums = source.allowEnums();
+        //TODO remove only for DEBUG Remi
+        allowProperty = com.sun.tools.javac.util.Options.instance(context).get("allowProperty") != null;
         dollarAssertionsDisabled = names.
-            fromString(target.syntheticNameChar() + "assertionsDisabled");
+                fromString(target.syntheticNameChar() + "assertionsDisabled");
         classDollar = names.
             fromString("class" + target.syntheticNameChar());
 
@@ -2000,6 +2003,10 @@ public class Lower extends TreeTranslator {
         if (currentClass.isDeclaredEnum())
             visitEnumDef(tree);
 
+        // If this is a bean definition
+        if ((tree.sym.flags_field & BEAN) != 0)
+            visitBeanDef(tree);
+
         // If this is a nested class, define a this$n field for
         // it and add to proxies.
         JCVariableDecl otdef = null;
@@ -2163,6 +2170,9 @@ public class Lower extends TreeTranslator {
     }
 
     public void visitMethodDef(JCMethodDecl tree) {
+        //if (allowProperty)
+        //    System.out.println("visit "+tree);
+ 
         if (tree.name == names.init && (currentClass.flags_field&ENUM) != 0) {
             // Add "String $enum$name, int $enum$ordinal" to the beginning of the
             // argument list for each constructor of an enum.
@@ -2967,6 +2977,376 @@ public class Lower extends TreeTranslator {
         result = tree;
         currentMethodSym = oldMethodSym;
     }
+    
+    public void visitPropertyDef(JCPropertyDecl tree) {
+        PropertySymbol sym = tree.sym;
+
+        // remove the property symbol from the class scope if necessary
+        // i.e if not synthetized
+        if ((tree.styles & JCPropertyDecl.SYNTHETIZED) == 0) {
+            currentClass.members().remove(sym);
+        } else {
+            sym.flags_field = sym.flags_field 
+              & ~AccessFlags | PRIVATE;
+        }
+        super.visitPropertyDef(tree);
+    }
+
+    private void addSynthetizedPropertyDef(JCPropertyDecl tree, VarSymbol literalVar, ListBuffer<JCTree> defs) {
+        // generate getter
+        if ((tree.styles & JCPropertyDecl.SETTER_ONLY) == 0) {
+            JCMethodDecl getterDef =
+                    make.MethodDef(tree.sym.getter,
+                            make.Block(0, List.<JCStatement>of(
+                                    make.Return(
+                                            make.Ident(tree.sym)))));
+            //FIXME Remi ugly patch because Lower.visitReturn()
+            getterDef.restype = make.Type(tree.sym.type);
+            defs.append(getterDef);
+        }
+
+        // generate setter
+        if ((tree.styles & JCPropertyDecl.GETTER_ONLY) == 0) {
+            assert tree.sym.setter.params.head != null;
+            JCBlock body;
+            if ((tree.styles & JCPropertyDecl.BOUND) == 0) {
+                // public void setXXX(type param) {
+                //   this.tree.sym = param;
+                // }
+                body = make.Block(0, List.<JCStatement>of(
+                        make.Exec(
+                                make.Assign(
+                                        make.Ident(tree.sym)
+                                        /*make.Select(
+                                                                make.Ident(names._this), tree.sym)*/,
+                                        make.Ident(tree.sym.setter.params.head)
+                                ).setType(tree.type))));
+            } else {
+                // public void setXXX(type param) {
+                //   type oldValue = this.tree.sym;
+                //   this.tree.sym = param;
+                //   propertyChanged(property, oldValue, param);
+                // }
+                VarSymbol oldValue = new VarSymbol(0,
+                        names.fromString("oldValue"),
+                        tree.type,
+                        tree.sym.setter);
+                //FIXME Remi signature is Object/Object
+                MethodSymbol propertyChanged = lookupMethod(tree.pos(),
+                        names.propertyChanged,
+                        tree.sym.owner.type,
+                        List.<Type>of(syms.propertyType, syms.objectType, syms.objectType));
+
+                body = make.Block(0, List.<JCStatement>of(
+                        make.VarDef(oldValue, make.Ident(tree.sym)),
+                        make.Exec(
+                                make.Assign(
+                                        make.Ident(tree.sym),
+                                        make.Ident(tree.sym.setter.params.head)
+                                ).setType(tree.type)
+                        ).setType(syms.voidType),
+                        make.Exec(
+                                make.App(
+                                        make.Select(
+                                                make.This(tree.sym.owner.type),
+                                                propertyChanged),
+                                        List.<JCExpression>of(
+                                                make.Ident(literalVar),
+                                                make.Ident(oldValue),
+                                                make.Ident(tree.sym.setter.params.head))
+                                ).setType(syms.voidType)
+                        ).setType(syms.voidType)
+                ));
+            }
+
+            JCMethodDecl setterDef =
+                    make.MethodDef(tree.sym.setter, body);
+            setterDef.params = List.<JCVariableDecl>of(
+                    make.VarDef(tree.sym.setter.params.head, null));
+            defs.append(setterDef);
+        }
+    }
+
+    private Name toAccessorName(String prefix, Name name) {
+        String text = name.toString();
+        text = prefix + Character.toUpperCase(text.charAt(0)) + text.substring(1);
+        return Name.fromString(names, text);
+    }
+
+    /**
+     * Translate a bean class.
+     */
+    private void visitBeanDef(JCClassDecl tree) {
+        make_at(tree.pos());
+
+        // classOfType adds a cache field to tree.defs unless
+        // target.hasClassLiterals()
+        JCExpression e_class = classOfType(tree.sym.type, tree.pos()).
+                setType(types.erasure(syms.classType));
+
+        // process each property
+        ListBuffer<JCExpression> properties = new ListBuffer<JCExpression>();
+        ListBuffer<JCTree> treedefs = new ListBuffer<JCTree>();
+        for (List<JCTree> defs = tree.defs;
+             defs.nonEmpty();
+             defs = defs.tail) {
+            if (defs.head.getTag() == JCTree.PROPERTYDEF) {
+                JCPropertyDecl property = (JCPropertyDecl) defs.head;
+
+                VarSymbol literalVar = addPropertyLiteralClass(tree, property, treedefs);
+
+                if ((property.styles & JCPropertyDecl.SYNTHETIZED) != 0) {
+                    addSynthetizedPropertyDef(property, literalVar, treedefs);
+                }
+
+                Symbol litteralClass = literalVar.owner;
+
+                Symbol propertyLiteralSym = lookupMethod(tree.pos(), property.name,
+                        tree.type, List.<Type>nil());
+
+                JCMethodDecl propertyLiteralDef =
+                        make.MethodDef((MethodSymbol) propertyLiteralSym,
+                                make.Block(0, List.<JCStatement>of(
+                                        make.Return(make.QualIdent(literalVar)
+                                        ))));
+                treedefs.append(propertyLiteralDef);
+
+                properties.append(make.QualIdent(literalVar));
+            }
+
+            treedefs.append(defs.head);
+        }
+
+        // private static final Properties<Bean,?>[] #PROPERTIES = { a, b, c };
+
+        Symbol propertiesSym = lookupMethod(tree.pos(), names.properties,
+                tree.type, List.<Type>nil());
+
+        Type propertiesType = ((MethodType) propertiesSym.type).restype;
+
+        Name varName = names.fromString(target.syntheticNameChar() + "PROPERTIES");
+        while (tree.sym.members().lookup(varName).scope != null) // avoid name clash
+            varName = names.fromString(varName + "" + target.syntheticNameChar());
+        VarSymbol valuesVar = new VarSymbol(PRIVATE | STATIC | SYNTHETIC,
+                varName,
+                propertiesType,
+                tree.type.tsym);
+        treedefs.append(make.VarDef(valuesVar, null));
+        tree.sym.members().enter(valuesVar);
+
+        VarSymbol local = new VarSymbol(0, names.properties, propertiesType, propertiesSym);
+        JCExpression propertiesResult = make.Conditional(
+                makeBinary(JCTree.EQ, make.Ident(local), makeNull()),
+                make.Assign(
+                        make.Ident(valuesVar),
+                        make.NewArray(
+                                make.Type(propertiesType),
+                                List.<JCExpression>nil(),
+                                properties.toList()
+                        ).setType(propertiesType)
+                ).setType(propertiesType),
+                make.Ident(local)
+        ).setType(propertiesType);
+
+        JCMethodDecl propertiesDef =
+                make.MethodDef((MethodSymbol) propertiesSym,
+                        make.Block(0, List.<JCStatement>of(
+                                make.VarDef(local, make.Ident(valuesVar)),
+                                make.Return(propertiesResult))));
+        treedefs.append(propertiesDef);
+
+        tree.defs = treedefs.toList();
+    }
+
+    private VarSymbol addPropertyLiteralClass(JCClassDecl tree,
+                                              JCPropertyDecl property, ListBuffer<JCTree> treedefs) {
+
+
+        ClassSymbol owner = tree.sym;
+
+        Type boxedType = (property.type.isPrimitive()) ?
+                types.boxedClass(property.type).type : property.type;
+
+        // java.lang.Property<bean, propertyType> type
+        ClassType propertyType =
+                new ClassType(Type.noType,
+                        List.of(tree.sym.type, boxedType),
+                        syms.propertyType.tsym);
+
+        // Create class symbol.
+        ClassSymbol c = reader.defineClass(
+                names.empty, owner);
+        c.flatname = chk.localClassName(c);
+        c.sourcefile = owner.sourcefile;
+        c.completer = null;
+        c.members_field = new Scope(c);
+        c.flags_field = FINAL | SYNTHETIC;
+        ClassType ctype = (ClassType) c.type;
+        ctype.supertype_field = propertyType;
+        ctype.interfaces_field = List.<Type>nil();
+
+        // Enter class symbol in owner scope and compiled table.
+        enterSynthetic(tree.pos(), c, owner.members());
+        chk.compiled.put(c.flatname, c);
+
+        // Create class definition tree.
+        JCClassDecl cdef = make.ClassDef(make.Modifiers(c.flags_field),
+                names.empty,
+                List.<JCTypeParameter>nil(),
+                null,
+                List.<JCExpression>nil(),
+                List.<JCTree>nil());
+        cdef.sym = c;
+        cdef.type = c.type;
+
+        // Append class definition tree to owner's definitions.
+        treedefs.append(cdef);
+
+        ListBuffer<JCTree> defs = new ListBuffer<JCTree>();
+
+        // create constructor
+        ClassType typeType =
+                new ClassType(Type.noType, List.of(boxedType), syms.classType.tsym);
+        ClassType beanType =
+                new ClassType(Type.noType, List.of(tree.sym.type), syms.classType.tsym);
+        MethodType constructorType = new MethodType(
+                List.of(syms.stringType, typeType, beanType),
+                syms.voidType,
+                List.<Type>nil(),
+                cdef.sym);
+        MethodSymbol constructorSym = new MethodSymbol(PUBLIC, names.init, constructorType, cdef.sym);
+
+        JCVariableDecl param1 = make.Param(names.fromString("name"),
+                syms.stringType, constructorSym);
+        param1.sym.flags_field |= SYNTHETIC;
+        JCVariableDecl param2 = make.Param(names.fromString("type"),
+                typeType, constructorSym);
+        param2.sym.flags_field |= SYNTHETIC;
+        JCVariableDecl param3 = make.Param(names.fromString("declaringType"),
+                beanType, constructorSym);
+        param3.sym.flags_field |= SYNTHETIC;
+        constructorSym.params = List.of(param1.sym, param2.sym, param3.sym);
+
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.propertyType;
+        //FIXME Remi bad attrEnv
+        zuper.sym = lookupConstructor(tree.pos(),
+                propertyType,
+                List.of(syms.stringType, typeType, beanType));
+        defs.append(make.MethodDef(constructorSym,
+                make.Block(0, List.<JCStatement>of(
+                        make.Exec(
+                                make.Apply(List.<JCExpression>nil(),
+                                        zuper,
+                                        List.<JCExpression>of(
+                                                make.Ident(param1.sym),
+                                                make.Ident(param2.sym),
+                                                make.Ident(param3.sym))
+                                ).setType(syms.voidType)
+                        )
+                ))));
+        cdef.sym.members().enter(constructorSym);
+
+        // create static singleton cache
+        VarSymbol cache = new VarSymbol(FINAL | STATIC | SYNTHETIC,
+                names.fromString("instance"),
+                propertyType,
+                c);
+        defs.append(
+                make.VarDef(cache,
+                        make.Create(constructorSym,
+                                List.of(
+                                        makeLit(syms.stringType,
+                                                property.name.toString()),
+                                        classOfType(property.sym.type, tree.pos()
+                                        ).setType(typeType),
+                                        classOfType(tree.sym.type, tree.pos()
+                                        ).setType(beanType)
+                                ))));
+        cdef.sym.members().enter(cache);
+
+        // create get
+        MethodType getType = new MethodType(List.of(syms.objectType),
+                syms.objectType,
+                List.<Type>nil(),
+                syms.methodClass);
+        MethodSymbol getSym = new MethodSymbol(PUBLIC, names.get, getType, cdef.sym);
+
+        JCStatement stat;
+        if ((property.styles & JCPropertyDecl.SETTER_ONLY) == 0) {
+            JCVariableDecl getparam = make.Param(names.fromString("bean"),
+                    syms.objectType, getSym);
+            getparam.sym.flags_field |= SYNTHETIC;
+            getSym.params = List.of(getparam.sym);
+
+            JCExpression value = make.Apply(
+                    List.<JCExpression>nil(),
+                    make.Select(
+                            make.TypeCast(tree.type,
+                                    make.Ident(getparam)),
+                            property.sym.getter),
+                    List.<JCExpression>nil()
+            ).setType(property.sym.type);
+            value = (property.sym.type != boxedType) ?
+                    boxPrimitive(value, boxedType) : value;
+
+            stat = make.Return(value);
+        } else {
+            stat = make.Throw(
+                    makeNewClass(syms.unsupportedOperationExceptionType, List.<JCExpression>nil()));
+        }
+
+        defs.append(make.MethodDef(getSym,
+                make.Block(0, List.<JCStatement>of(stat)
+                )));
+        cdef.sym.members().enter(getSym);
+
+        // create set
+        MethodType setType = new MethodType(List.of(syms.objectType, syms.objectType),
+                syms.voidType,
+                List.<Type>nil(),
+                syms.methodClass);
+        MethodSymbol setSym = new MethodSymbol(PUBLIC, names.set, setType, cdef.sym);
+
+        /*JCStatement stat;*/
+        if ((property.styles & JCPropertyDecl.GETTER_ONLY) == 0) {
+            JCVariableDecl setparam1 = make.Param(names.fromString("bean"),
+                    syms.objectType, setSym);
+            setparam1.mods.flags |= SYNTHETIC;
+            setparam1.sym.flags_field |= SYNTHETIC;
+            JCVariableDecl setparam2 = make.Param(names.fromString("value"),
+                    syms.objectType, setSym);
+            setparam2.mods.flags |= SYNTHETIC;
+            setparam2.sym.flags_field |= SYNTHETIC;
+            setSym.params = List.of(setparam1.sym, setparam2.sym);
+
+            JCExpression value = make.Ident(setparam2);
+            if (property.type != syms.objectType) {
+                value = make.TypeCast(boxedType, value);
+                value = (boxedType != property.type) ?
+                        unbox(value, property.type) : value;
+            }
+            stat = make.Exec(
+                    make.Apply(List.<JCExpression>nil(),
+                            make.Select(
+                                    make.TypeCast(tree.type,
+                                            make.Ident(setparam1)),
+                                    property.sym.setter)/*.setType(property.sym.setter.type)*/,
+                            List.<JCExpression>of(value)
+                    ).setType(syms.voidType));
+        } else {
+            stat = stat = make.Throw(
+                    makeNewClass(syms.unsupportedOperationExceptionType,
+                            List.<JCExpression>nil()));
+        }
+
+        defs.append(make.MethodDef(setSym,
+                make.Block(0, List.<JCStatement>of(stat))));
+        cdef.sym.members().enter(setSym);
+        cdef.defs = defs.toList();
+
+        return cache;
+    }
 
     public void visitBlock(JCBlock tree) {
         MethodSymbol oldMethodSym = currentMethodSym;
@@ -3070,6 +3450,12 @@ public class Lower extends TreeTranslator {
             result = makeThis(tree.pos(), tree.selected.type.tsym);
         else
             result = access(tree.sym, tree, enclOp, qualifiedSuperAccess);
+    }
+    
+    @Override
+    public void visitSharp(JCSharpAccess tree) {
+        tree.selected = translate(tree.selected);
+        result = tree;
     }
 
     public void visitLetExpr(LetExpr tree) {

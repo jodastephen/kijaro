@@ -105,4 +105,12 @@ public interface TreeVisitor<R,P> {
     R visitWhileLoop(WhileLoopTree node, P p);
     R visitWildcard(WildcardTree node, P p);
     R visitOther(Tree node, P p);
+    /**
+     * @since 1.7
+     */
+    R visitProperty(PropertyTree node, P p);
+    /**
+     * @since 1.7
+     */
+    R visitSharpSelect(SharpSelectTree node, P p);
 }

@@ -94,6 +94,12 @@ public class TreeScanner extends Visitor {
         scan(tree.vartype);
         scan(tree.init);
     }
+    
+    @Override
+    public void visitPropertyDef(JCPropertyDecl tree) {
+        scan(tree.mods);
+        scan(tree.proptype);
+    }
 
     public void visitSkip(JCSkip tree) {
     }
@@ -247,6 +253,10 @@ public class TreeScanner extends Visitor {
     }
 
     public void visitSelect(JCFieldAccess tree) {
+        scan(tree.selected);
+    }
+
+    public void visitSharp(JCSharpAccess tree) {
         scan(tree.selected);
     }
 

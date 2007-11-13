@@ -106,6 +106,7 @@ public enum Token {
     SEMI(";"),
     COMMA(","),
     DOT("."),
+    SHARP("#"),
     ELLIPSIS("..."),
     EQ("="),
     GT(">"),
@@ -145,6 +146,10 @@ public enum Token {
     GTGTEQ(">>="),
     GTGTGTEQ(">>>="),
     MONKEYS_AT("@"),
+    PROPERTY("property"),
+    GET("get"),
+    SET("set"),
+    BOUND("bound"),
     CUSTOM;
 
     Token() {
@@ -154,5 +159,14 @@ public enum Token {
         this.name = name;
     }
 
+    public boolean isLocal() {
+        int ordinal = ordinal();
+        return ordinal >= FIRST_LOCAL_TOKEN &&
+                ordinal <= LAST_LOCAL_TOKEN;
+    }
+
     public final String name;
+
+    private static final int FIRST_LOCAL_TOKEN = PROPERTY.ordinal();
+    private static final int LAST_LOCAL_TOKEN = BOUND.ordinal();
 }
