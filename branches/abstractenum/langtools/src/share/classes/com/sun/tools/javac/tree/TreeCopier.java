@@ -290,6 +290,12 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCExpression selected = copy(t.selected, p);
         return M.at(t.pos).Select(selected, t.name);
     }
+    
+   public JCTree visitSharpSelect(SharpSelectTree node, P p) {
+       JCSharpAccess t = (JCSharpAccess) node;
+        JCExpression selected = copy(t.selected, p);
+        return M.at(t.pos).Sharp(selected, t.name);
+    }
 
     public JCTree visitEmptyStatement(EmptyStatementTree node, P p) {
         JCSkip t = (JCSkip) node;
@@ -382,6 +388,15 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCExpression vartype = copy(t.vartype, p);
         JCExpression init = copy(t.init, p);
         return M.at(t.pos).VarDef(mods, t.name, vartype, init);
+    }
+    
+    public JCTree visitProperty(PropertyTree node, P p) {
+        JCPropertyDecl t = (JCPropertyDecl) node;
+        JCModifiers mods = copy(t.mods, p);
+        JCExpression vartype = copy(t.proptype, p);
+        JCMethodDecl getter = copy(t.getter, p);
+        JCMethodDecl setter = copy(t.setter, p);
+        return M.at(t.pos).PropertyDef(mods, t.name, vartype, t.styles, getter, setter);
     }
 
     public JCTree visitWhileLoop(WhileLoopTree node, P p) {

@@ -152,6 +152,15 @@ public class TreeTranslator extends JCTree.Visitor {
         result = tree;
     }
 
+    @Override
+    public void visitPropertyDef(JCPropertyDecl tree) {
+        tree.mods = translate(tree.mods);
+        tree.proptype = translate(tree.proptype);
+        tree.getter = translate(tree.getter);
+        tree.setter = translate(tree.setter);
+        result = tree;
+    }
+
     public void visitSkip(JCSkip tree) {
         result = tree;
     }
@@ -335,6 +344,12 @@ public class TreeTranslator extends JCTree.Visitor {
     }
 
     public void visitSelect(JCFieldAccess tree) {
+        tree.selected = translate(tree.selected);
+        result = tree;
+    }
+
+    @Override
+    public void visitSharp(JCSharpAccess tree) {
         tree.selected = translate(tree.selected);
         result = tree;
     }

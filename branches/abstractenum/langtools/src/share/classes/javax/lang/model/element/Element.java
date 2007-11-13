@@ -185,6 +185,7 @@ public interface Element {
      * <li> If this is a top-level type, its package is returned.
      * <li> If this is a package, {@code null} is returned.
      * <li> If this is a type parameter, {@code null} is returned.
+     * <li> If this is an accessor method (getter or setter), its property is returned.
      * </ul>
      *
      * @return the enclosing element, or {@code null} if there is none

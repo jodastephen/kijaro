@@ -494,7 +494,10 @@ public class Gen extends JCTree.Visitor {
                     }
                 }
                 break;
-            default:
+            case JCTree.PROPERTYDEF:
+                //FIXME Remi, do something here !!
+                break;
+                default:
                 assert false;
             }
         }
@@ -2095,11 +2098,19 @@ public class Gen extends JCTree.Visitor {
         } else if ((sym.flags() & STATIC) != 0) {
             if (!isAccessSuper(env.enclMethod))
                 sym = binaryQualifier(sym, env.enclClass.type);
-            result = items.makeStaticItem(sym);
+            if ((sym.flags() & PROPERTY) != 0  && env.enclMethod.sym.property == sym) {
+                result = items.makePropertyItem((PropertySymbol) sym, true);
+            } else {
+                result = items.makeStaticItem(sym);
+            }
         } else {
             items.makeThisItem().load();
             sym = binaryQualifier(sym, env.enclClass.type);
-            result = items.makeMemberItem(sym, (sym.flags() & PRIVATE) != 0);
+            if ((sym.flags() & PROPERTY) != 0 && env.enclMethod.sym.property == sym) {
+                result = items.makePropertyItem((PropertySymbol) sym, (sym.flags() & PRIVATE) != 0);
+            } else {
+                result = items.makeMemberItem(sym, (sym.flags() & PRIVATE) != 0);
+            }
         }
     }
 
@@ -2147,17 +2158,25 @@ public class Gen extends JCTree.Visitor {
                 if (!selectSuper && (ssym == null || ssym.kind != TYP))
                     base = base.load();
                 base.drop();
-                result = items.makeStaticItem(sym);
+                if ((sym.flags() & PROPERTY) != 0  && env.enclMethod.sym.property == sym) {
+                    result = items.makePropertyItem((PropertySymbol) sym, true);
+                } else {
+                    result = items.makeStaticItem(sym);
+                }
             } else {
                 base.load();
                 if (sym == syms.lengthVar) {
                     code.emitop0(arraylength);
                     result = items.makeStackItem(syms.intType);
                 } else {
-                    result = items.
-                        makeMemberItem(sym,
-                                       (sym.flags() & PRIVATE) != 0 ||
-                                       selectSuper || accessSuper);
+                    boolean nonVirtual = (sym.flags() & PRIVATE) != 0 ||
+                            selectSuper || accessSuper;
+                    if ((sym.flags() & PROPERTY) != 0
+                            && env.enclMethod.sym.property == sym) {
+                        result = items.makePropertyItem((PropertySymbol) sym, nonVirtual);
+                    } else {
+                        result = items.makeMemberItem(sym, nonVirtual);
+                    }
                 }
             }
         }
@@ -2177,6 +2196,11 @@ public class Gen extends JCTree.Visitor {
             result = items.makeImmediateItem(tree.type, tree.value);
     }
 
+    @Override
+    public void visitSharp(JCSharpAccess tree) {
+        result = items.makeStaticItem(tree.sym.literal).invoke();
+    }
+    
     public void visitLetExpr(LetExpr tree) {
         int limit = code.nextreg;
         genStats(tree.defs, env);
