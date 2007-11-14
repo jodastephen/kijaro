@@ -41,6 +41,7 @@ public class AE4 {
     AbstractE4 ae2;
 
     public static void main(String[] args) {
+        AbstractE4<String,Long> tt = E21.two;
         AE4 t = new AE4();
         t.ae2 = E21.one;
         assert 0 == t.ae2.f();
