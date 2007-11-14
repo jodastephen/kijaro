@@ -1,0 +1,4 @@
+InvalidPropertyDeclaration.java:15: <identifier> expected
+    public property error;
+                    ^
+1 error
