@@ -1,4 +1,15 @@
+package property.simple;
 
+/*
+ * @test @(#)Test2.java 1.7 10/06/07
+ * @bug 4228585
+ * @summary support property syntax check
+ * @author forax
+ *
+ * @library ../..
+ * @compile Test2.java
+ * @run main property.simple.Test2
+ */
 public class Test2 {
     public property String test;
     
