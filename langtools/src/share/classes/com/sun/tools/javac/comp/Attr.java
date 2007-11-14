@@ -2546,8 +2546,13 @@ public class Attr extends JCTree.Visitor {
 
         if (clazztype.tag == CLASS) {
             List<Type> formals = clazztype.tsym.type.getTypeArguments();
+            int formalsLength = formals.length();
+            // If clazztype is abstract enum should remove the synthetic Enum type
+            if (clazztype.tsym.isAbstractEnum() && formalsLength > 0 &&
+                    actuals.length() == formalsLength-1)
+                formalsLength--;
 
-            if (actuals.length() == formals.length()) {
+            if (actuals.length() == formalsLength) {
                 List<Type> a = actuals;
                 List<Type> f = formals;
                 while (a.nonEmpty()) {
