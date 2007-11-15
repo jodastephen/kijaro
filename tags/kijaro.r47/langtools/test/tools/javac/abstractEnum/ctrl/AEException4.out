@@ -1,0 +1,16 @@
+AEException4.java:40: incompatible types
+found   : abstractEnum.ctrl.AEException4
+required: int
+        switch (ae4) {
+                ^
+AEException4.java:41: cannot find symbol
+symbol  : variable one
+location: class abstractEnum.ctrl.TestAEException4
+            case one:
+                 ^
+AEException4.java:44: cannot find symbol
+symbol  : variable two
+location: class abstractEnum.ctrl.TestAEException4
+            case two:
+                 ^
+3 errors

@@ -1,0 +1,4 @@
+InvalidSetterType.java:18: setter parameter type int is incompatible with declared type double of property x
+      set(int v) {
+      ^
+1 error
