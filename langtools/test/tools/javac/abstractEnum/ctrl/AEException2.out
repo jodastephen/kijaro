@@ -1,0 +1,4 @@
+AEException2.java:34: enum types can only extend abstract enum
+public abstract enum AEException2 extends java.util.ArrayList {
+                ^
+1 error
