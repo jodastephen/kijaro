@@ -1,7 +1,12 @@
 public class Dummy {
+    public final String message = "Message";
     private final String text;
     public Dummy(String text) {
         this.text = text;
+    }
+
+    public void shout(String message) {
+        System.out.println("Message from shout: " + message + text);
     }
 
     public static void fixed(String message) {
