@@ -1054,23 +1054,36 @@ public class Parser {
                         S.nextToken();
                         System.out.println(" Token " + S.token());
                         System.out.println(" TName " + S.name());
-                        if (typeArgs != null || S.token() != IDENTIFIER) {
+                        if (typeArgs != null) {
                             return illegal();
                         }
                         JCExpression primary = t;
                         System.out.println(" Primary " + primary);
-                        Name name = ident();  // calls S.nextToken()
-                        System.out.println(" Name " + name);
-                        
-                        System.out.println(" Token " + S.token());
-                        if (S.token() != LPAREN) {
-                            System.out.println(" Illegal");
-                            return illegal();  // field reference
-                        } else {
+                        if (S.token() == LPAREN) {
+                            System.out.println(" Constructor reference");
                             List<JCExpression> types = types();
                             System.out.println(" Types " + types);
-                            t = toP(F.at(pos).MemberReference(primary, name, types));
+                            t = toP(F.at(pos).ConstructorReference(primary, types));
                             System.out.println(" Token " + S.token());
+                            
+                        } else if (S.token() == IDENTIFIER) {
+                            Name name = ident();  // calls S.nextToken()
+                            System.out.println(" Name " + name);
+                            
+                            System.out.println(" Token " + S.token());
+                            if (S.token() != LPAREN) {
+                                System.out.println(" Field reference");
+                                t = toP(F.at(pos).FieldReference(primary, name));
+                                System.out.println(" Token " + S.token());
+                            } else {
+                                System.out.println(" Method reference");
+                                List<JCExpression> types = types();
+                                System.out.println(" Types " + types);
+                                t = toP(F.at(pos).MethodReference(primary, name, types));
+                                System.out.println(" Token " + S.token());
+                            }
+                        } else {
+                            return illegal();
                         }
                     }
                     break loop;
@@ -1155,23 +1168,36 @@ public class Parser {
                 S.nextToken();
                 System.out.println(" Token " + S.token());
                 System.out.println(" TName " + S.name());
-                if (typeArgs != null || S.token() != IDENTIFIER) {
+                if (typeArgs != null) {
                     return illegal();
                 }
                 JCExpression primary = t;
                 System.out.println(" Primary " + primary);
-                Name name = ident();  // calls S.nextToken()
-                System.out.println(" Name " + name);
-                
-                System.out.println(" Token " + S.token());
-                if (S.token() != LPAREN) {
-                    System.out.println(" Illegal");
-                    return illegal();  // field reference
-                } else {
+                if (S.token() == LPAREN) {
+                    System.out.println(" Constructor reference");
                     List<JCExpression> types = types();
                     System.out.println(" Types " + types);
-                    t = toP(F.at(pos).MemberReference(primary, name, types));
+                    t = toP(F.at(pos).ConstructorReference(primary, types));
                     System.out.println(" Token " + S.token());
+                    
+                } else if (S.token() == IDENTIFIER) {
+                    Name name = ident();  // calls S.nextToken()
+                    System.out.println(" Name " + name);
+                    
+                    System.out.println(" Token " + S.token());
+                    if (S.token() != LPAREN) {
+                        System.out.println(" Field reference");
+                        t = toP(F.at(pos).FieldReference(primary, name));
+                        System.out.println(" Token " + S.token());
+                    } else {
+                        System.out.println(" Method reference");
+                        List<JCExpression> types = types();
+                        System.out.println(" Types " + types);
+                        t = toP(F.at(pos).MethodReference(primary, name, types));
+                        System.out.println(" Token " + S.token());
+                    }
+                } else {
+                    return illegal();
                 }
                 break;
             } else {
@@ -2774,7 +2800,10 @@ public class Parser {
         case JCTree.PLUS_ASG: case JCTree.MINUS_ASG:
         case JCTree.MUL_ASG: case JCTree.DIV_ASG: case JCTree.MOD_ASG:
         case JCTree.APPLY: case JCTree.NEWCLASS:
-        case JCTree.MEMBERREFERENCE: case JCTree.ERRONEOUS:  // FCM-MREF
+        case JCTree.FIELDREFERENCE:  // FCM-MREF
+        case JCTree.CONSTRUCTORREFERENCE:  // FCM-MREF
+        case JCTree.METHODREFERENCE:  // FCM-MREF
+        case JCTree.ERRONEOUS:
             return t;
         default:
             log.error(t.pos, "not.stmt");

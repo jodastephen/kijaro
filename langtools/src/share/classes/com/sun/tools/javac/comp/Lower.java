@@ -3073,8 +3073,70 @@ public class Lower extends TreeTranslator {
             result = access(tree.sym, tree, enclOp, qualifiedSuperAccess);
     }
 
-    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
-        System.out.println("Lower (Start)");
+    @Override
+    public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitFieldReference (Start)");
+        
+        // start process of changing the AST
+        make_at(tree.target.pos());
+        
+        // find the method that resolves the Field
+        Symbol findMethod = lookupMethod(tree.target.pos(),
+                names.findField,
+                currentClass.type,
+                List.of(syms.classType, syms.stringType));
+        
+        // build the arguments into a list
+        JCExpression fieldName = makeLit(syms.stringType, tree.name.toString());
+        List<JCExpression> args = List.of(classOf(tree.target), fieldName);
+        
+        // change the AST
+        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
+        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
+        System.out.println("Done create:" + invokeFindNode);
+        
+        // return the updated AST
+        result = invokeFindNode;
+        
+        System.out.println("Lower.visitFieldReference (End)");
+    }
+
+    @Override
+    public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitConstructorReference (Start)");
+        
+        // start process of changing the AST
+        make_at(tree.target.pos());
+        
+        // find the method that resolves the Constructor
+        Symbol findMethod = lookupMethod(tree.target.pos(),
+                   names.findConstructor,
+                   currentClass.type,
+                   List.of(syms.classType, new ArrayType(syms.classType, syms.arrayClass)));
+        
+        // build the arguments into a list
+        ListBuffer<JCExpression> elems = new ListBuffer<JCExpression>();
+        for (JCExpression expr : tree.types) {
+            elems.append(classOf(expr));
+        }
+        JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
+        typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
+        List<JCExpression> args = List.of(classOf(tree.target),  typesArray);
+        
+        // change the AST
+        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
+        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
+        System.out.println("Done create:" + invokeFindNode);
+        
+        // return the updated AST
+        result = invokeFindNode;
+        
+        System.out.println("Lower.visitConstructorReference (End)");
+    }
+
+    @Override
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitMethodReference (Start)");
         
         // start process of changing the AST
         make_at(tree.target.pos());
@@ -3084,7 +3146,6 @@ public class Lower extends TreeTranslator {
                    names.findMethod,
                    currentClass.type,
                    List.of(syms.classType, syms.stringType, new ArrayType(syms.classType, syms.arrayClass)));
-//      System.out.println("Done find:" + findMethod);
         
         // build the arguments into a list
         ListBuffer<JCExpression> elems = new ListBuffer<JCExpression>();
@@ -3104,7 +3165,7 @@ public class Lower extends TreeTranslator {
         // return the updated AST
         result = invokeFindNode;
         
-        System.out.println("Lower (End)");
+        System.out.println("Lower.visitMethodReference (End)");
     }
 
     public void visitLetExpr(LetExpr tree) {

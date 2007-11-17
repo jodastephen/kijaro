@@ -473,7 +473,23 @@ implements CRTFlags {
             result = sr;
         }
 
-        public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
+        @Override
+        public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
+            SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
+            sr.mergeWith(csp(tree.target));
+            result = sr;
+        }
+
+        @Override
+        public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+            SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
+            sr.mergeWith(csp(tree.target));
+            sr.mergeWith(csp(tree.types));
+            result = sr;
+        }
+
+        @Override
+        public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
             SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
             sr.mergeWith(csp(tree.target));
             sr.mergeWith(csp(tree.types));

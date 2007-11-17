@@ -290,11 +290,27 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         return M.at(t.pos).Select(selected, t.name);
     }
 
-    public JCTree visitMemberReference(MemberReferenceTree node, P p) {  // FCM-MREF
-        JCMemberReference t = (JCMemberReference) node;
+    @Override
+    public JCTree visitFieldReference(FieldReferenceTree node, P p) {  // FCM-MREF
+        JCFieldReference t = (JCFieldReference) node;
+        JCExpression target = copy(t.target, p);
+        return M.at(t.pos).FieldReference(target, t.name);
+    }
+
+    @Override
+    public JCTree visitConstructorReference(ConstructorReferenceTree node, P p) {  // FCM-MREF
+        JCConstructorReference t = (JCConstructorReference) node;
         JCExpression target = copy(t.target, p);
         List<JCExpression> types = copy(t.types, p);
-        return M.at(t.pos).MemberReference(target, t.name, types);
+        return M.at(t.pos).ConstructorReference(target, types);
+    }
+
+    @Override
+    public JCTree visitMethodReference(MethodReferenceTree node, P p) {  // FCM-MREF
+        JCMethodReference t = (JCMethodReference) node;
+        JCExpression target = copy(t.target, p);
+        List<JCExpression> types = copy(t.types, p);
+        return M.at(t.pos).MethodReference(target, t.name, types);
     }
 
     public JCTree visitEmptyStatement(EmptyStatementTree node, P p) {

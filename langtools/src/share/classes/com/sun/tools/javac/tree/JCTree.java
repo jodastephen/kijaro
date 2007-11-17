@@ -219,13 +219,21 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static final int SELECT = INDEXED + 1;
 
-    /** Selections, of type MemberReference.
+    /** Selections, of type FieldReference.
      */
-    public static final int MEMBERREFERENCE = SELECT + 1;
+    public static final int FIELDREFERENCE = SELECT + 1;
+
+    /** Selections, of type ConstructorReference.
+     */
+    public static final int CONSTRUCTORREFERENCE = FIELDREFERENCE + 1;
+
+    /** Selections, of type MethodReference.
+     */
+    public static final int METHODREFERENCE = CONSTRUCTORREFERENCE + 1;
 
     /** Simple identifiers, of type Ident.
      */
-    public static final int IDENT = MEMBERREFERENCE + 1;
+    public static final int IDENT = METHODREFERENCE + 1;
 
     /** Literals, of type Literal.
      */
@@ -1668,14 +1676,82 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
+     * A field reference.
+     */
+    public static class JCFieldReference extends JCExpression implements FieldReferenceTree {
+        // FCM-MREF
+        public JCExpression target;
+        public Name name;
+        protected JCFieldReference(
+                JCExpression target,
+                Name identifier) {
+            this.target = target;
+            this.name = identifier;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitFieldReference(this); }
+
+        public Kind getKind() { return Kind.FIELD_REFERENCE; }
+        public JCExpression getTarget() { return target; }
+        public Name getName() { return name; }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitFieldReference(this, d);
+        }
+        @Override
+        public JCFieldReference setType(Type type) {
+            super.setType(type);
+            return this;
+        }
+        public int getTag() {
+            return FIELDREFERENCE;
+        }
+    }
+
+    /**
+     * A constructor reference.
+     */
+    public static class JCConstructorReference extends JCExpression implements ConstructorReferenceTree {
+        // FCM-MREF
+        public JCExpression target;
+        public List<JCExpression> types;
+        protected JCConstructorReference(
+                JCExpression target,
+                List<JCExpression> types) {
+            this.target = target;
+            this.types = (types == null) ? List.<JCExpression>nil() : types;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitConstructorReference(this); }
+
+        public Kind getKind() { return Kind.CONSTRUCTOR_REFERENCE; }
+        public JCExpression getTarget() { return target; }
+        public List<JCExpression> getTypes() {
+            return types;
+        }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitConstructorReference(this, d);
+        }
+        @Override
+        public JCConstructorReference setType(Type type) {
+            super.setType(type);
+            return this;
+        }
+        public int getTag() {
+            return CONSTRUCTORREFERENCE;
+        }
+    }
+
+    /**
      * A member reference.
      */
-    public static class JCMemberReference extends JCExpression implements MemberReferenceTree {
+    public static class JCMethodReference extends JCExpression implements MethodReferenceTree {
         // FCM-MREF
         public JCExpression target;
         public Name name;
         public List<JCExpression> types;
-        protected JCMemberReference(
+        protected JCMethodReference(
                 JCExpression target,
                 Name identifier,
                 List<JCExpression> types) {
@@ -1684,9 +1760,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
             this.types = (types == null) ? List.<JCExpression>nil() : types;
         }
         @Override
-        public void accept(Visitor v) { v.visitMemberReference(this); }
+        public void accept(Visitor v) { v.visitMethodReference(this); }
 
-        public Kind getKind() { return Kind.MEMBER_REFERENCE; }
+        public Kind getKind() { return Kind.METHOD_REFERENCE; }
         public JCExpression getTarget() { return target; }
         public Name getName() { return name; }
         public List<JCExpression> getTypes() {
@@ -1694,15 +1770,15 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         }
         @Override
         public <R,D> R accept(TreeVisitor<R,D> v, D d) {
-            return v.visitMemberReference(this, d);
+            return v.visitMethodReference(this, d);
         }
         @Override
-        public JCMemberReference setType(Type type) {
+        public JCMethodReference setType(Type type) {
             super.setType(type);
             return this;
         }
         public int getTag() {
-            return MEMBERREFERENCE;
+            return METHODREFERENCE;
         }
     }
 
@@ -2153,6 +2229,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         JCInstanceOf TypeTest(JCExpression expr, JCTree clazz);
         JCArrayAccess Indexed(JCExpression indexed, JCExpression index);
         JCFieldAccess Select(JCExpression selected, Name selector);
+        JCFieldReference FieldReference(JCExpression target, Name name);  // FCM-MREF
+        JCConstructorReference ConstructorReference(JCExpression target, List<JCExpression> types);  // FCM-MREF
+        JCMethodReference MethodReference(JCExpression target, Name name, List<JCExpression> types);  // FCM-MREF
         JCIdent Ident(Name idname);
         JCLiteral Literal(int tag, Object value);
         JCPrimitiveTypeTree TypeIdent(int typetag);
@@ -2207,7 +2286,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitTypeTest(JCInstanceOf that)         { visitTree(that); }
         public void visitIndexed(JCArrayAccess that)         { visitTree(that); }
         public void visitSelect(JCFieldAccess that)          { visitTree(that); }
-        public void visitMemberReference(JCMemberReference that) { visitTree(that); }  // FCM-MREF
+        public void visitFieldReference(JCFieldReference that) { visitTree(that); }  // FCM-MREF
+        public void visitConstructorReference(JCConstructorReference that) { visitTree(that); }  // FCM-MREF
+        public void visitMethodReference(JCMethodReference that) { visitTree(that); }  // FCM-MREF
         public void visitIdent(JCIdent that)                 { visitTree(that); }
         public void visitLiteral(JCLiteral that)             { visitTree(that); }
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }

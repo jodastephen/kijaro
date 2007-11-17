@@ -331,10 +331,24 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return scan(node.getExpression(), p);
     }
 
-    public R visitMemberReference(MemberReferenceTree node, P p) {  // FCM-MREF
+    @Override
+    public R visitFieldReference(FieldReferenceTree node, P p) {  // FCM-MREF
+        R r = scan(node.getTarget(), p);
+        return r;
+    }
+
+    @Override
+    public R visitConstructorReference(ConstructorReferenceTree node, P p) {  // FCM-MREF
         R r = scan(node.getTarget(), p);
         r = scanAndReduce(node.getTypes(), p, r);
-        return null;
+        return r;
+    }
+
+    @Override
+    public R visitMethodReference(MethodReferenceTree node, P p) {  // FCM-MREF
+        R r = scan(node.getTarget(), p);
+        r = scanAndReduce(node.getTypes(), p, r);
+        return r;
     }
 
     public R visitIdentifier(IdentifierTree node, P p) {

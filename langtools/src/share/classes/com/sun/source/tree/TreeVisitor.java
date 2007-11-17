@@ -88,7 +88,9 @@ public interface TreeVisitor<R,P> {
     R visitParenthesized(ParenthesizedTree node, P p);
     R visitReturn(ReturnTree node, P p);
     R visitMemberSelect(MemberSelectTree node, P p);
-    R visitMemberReference(MemberReferenceTree node, P p);  // FCM-MREF
+    R visitFieldReference(FieldReferenceTree node, P p);  // FCM-MREF
+    R visitConstructorReference(ConstructorReferenceTree node, P p);  // FCM-MREF
+    R visitMethodReference(MethodReferenceTree node, P p);  // FCM-MREF
     R visitEmptyStatement(EmptyStatementTree node, P p);
     R visitSwitch(SwitchTree node, P p);
     R visitSynchronized(SynchronizedTree node, P p);

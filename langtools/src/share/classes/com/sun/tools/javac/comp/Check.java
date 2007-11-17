@@ -522,11 +522,11 @@ public class Check {
         }
     }
 
-    /** Check that type is a method parameter type.
+    /** Check that type is a parameter type.
      *  @param pos           Position to be used for error reporting.
      *  @param t             The type to be checked.
      */
-    Type checkMethodParamType(DiagnosticPosition pos, Type t) {  // FCM-MREF
+    Type checkParamType(DiagnosticPosition pos, Type t) {  // FCM-MREF
         switch (t.tag) {
         case BOOLEAN:
         case CHAR:

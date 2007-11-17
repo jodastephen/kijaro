@@ -171,9 +171,19 @@ public interface Tree {
         METHOD_INVOCATION(MethodInvocationTree.class),
 
         /**
-         * Used for instances of {@link MemberReferenceTree}.
+         * Used for instances of {@link FieldReferenceTree}.
          */
-        MEMBER_REFERENCE(MemberReferenceTree.class),  // FCM-MREF
+        FIELD_REFERENCE(FieldReferenceTree.class),  // FCM-MREF
+
+        /**
+         * Used for instances of {@link ConstructorReferenceTree}.
+         */
+        CONSTRUCTOR_REFERENCE(ConstructorReferenceTree.class),  // FCM-MREF
+
+        /**
+         * Used for instances of {@link MethodReferenceTree}.
+         */
+        METHOD_REFERENCE(MethodReferenceTree.class),  // FCM-MREF
 
         /**
          * Used for instances of {@link ModifiersTree}.
