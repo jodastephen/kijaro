@@ -250,7 +250,19 @@ public class TreeScanner extends Visitor {
         scan(tree.selected);
     }
 
-    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
+    @Override
+    public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
+        scan(tree.target);
+    }
+
+    @Override
+    public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+        scan(tree.target);
+        scan(tree.types);
+    }
+
+    @Override
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
         scan(tree.target);
         scan(tree.types);
     }

@@ -1019,10 +1019,35 @@ public class Pretty extends JCTree.Visitor {
         }
     }
 
-    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
+    @Override
+    public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
         try {
             printExpr(tree.target, TreeInfo.postfixPrec);
-            print("#" + tree.name);
+            print("#");
+            print(tree.name);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+        try {
+            printExpr(tree.target, TreeInfo.postfixPrec);
+            print("#(");
+            printExprs(tree.types);
+            print(")");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        try {
+            printExpr(tree.target, TreeInfo.postfixPrec);
+            print("#");
+            print(tree.name);
             print("(");
             printExprs(tree.types);
             print(")");

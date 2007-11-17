@@ -446,10 +446,10 @@ public class Attr extends JCTree.Visitor {
 
     /** Attribute a type argument list, returning a list of types.
      */
-    List<Type> attribMethodParamTypes(List<JCExpression> trees, Env<AttrContext> env) {  // FCM-MREF
+    List<Type> attribParamTypes(List<JCExpression> trees, Env<AttrContext> env) {  // FCM-MREF
         ListBuffer<Type> argtypes = new ListBuffer<Type>();
         for (List<JCExpression> l = trees; l.nonEmpty(); l = l.tail)
-            argtypes.append(chk.checkMethodParamType(l.head.pos(), attribType(l.head, env)));
+            argtypes.append(chk.checkParamType(l.head.pos(), attribType(l.head, env)));
         return argtypes.toList();
     }
 
@@ -2430,26 +2430,64 @@ public class Attr extends JCTree.Visitor {
         }
     }
 
-    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
-        System.out.println("Attr.visitMemberReference (Start)");
-        
-        // return type of j.u.r.Method
-        tree.type = syms.reflectMethodType;
+    @Override
+    public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
+        System.out.println("Attr.visitFieldReference (Start)");
         
         // resolve the target
         Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
-        System.out.println(site);
         
-        // resolve the method types
-        List<Type> types = attribMethodParamTypes(tree.types, env);
+        // validate that field exists and is accessible
+        Symbol sym = rs.resolveInternalField(tree.pos(), env, site, tree.name);
+        System.out.println("Matched:" + sym);
+        
+        // assign and check types
+        tree.type = syms.reflectFieldType;
+        result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
+        
+        System.out.println("Attr.visitFieldReference (End)");
+    }
+
+    @Override
+    public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+        System.out.println("Attr.visitConstructorReference (Start)");
+        
+        // resolve the target
+        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        
+        // resolve the parameter types
+        List<Type> types = attribParamTypes(tree.types, env);
+        
+        // validate that constructor exists and is accessible
+        Symbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, types, null);
+        System.out.println("Matched:" + sym);
+        
+        // assign and check types
+        tree.type = syms.reflectConstructorType;
+        result = check(tree, syms.reflectConstructorType, VAL, pkind, pt);
+        
+        System.out.println("Attr.visitConstructorReference (End)");
+    }
+
+    @Override
+    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Attr.visitMethodReference (Start)");
+        
+        // resolve the target
+        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        
+        // resolve the parameter types
+        List<Type> types = attribParamTypes(tree.types, env);
         
         // validate that method exists and is accessible
         Symbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, types, null);
         System.out.println("Matched:" + sym);
-//      tree.resolved = sym;
+        
+        // assign and check types
+        tree.type = syms.reflectMethodType;
         result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
         
-        System.out.println("Attr.visitMemberReference (End)");
+        System.out.println("Attr.visitMethodReference (End)");
     }
 
     public void visitLiteral(JCLiteral tree) {

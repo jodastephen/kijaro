@@ -208,7 +208,18 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
         return defaultAction(node, p);
     }
 
-    public R visitMemberReference(MemberReferenceTree node, P p) {  // FCM-MREF
+    @Override
+    public R visitFieldReference(FieldReferenceTree node, P p) {  // FCM-MREF
+        return defaultAction(node, p);
+    }
+
+    @Override
+    public R visitConstructorReference(ConstructorReferenceTree node, P p) {  // FCM-MREF
+        return defaultAction(node, p);
+    }
+
+    @Override
+    public R visitMethodReference(MethodReferenceTree node, P p) {  // FCM-MREF
         return defaultAction(node, p);
     }
 
