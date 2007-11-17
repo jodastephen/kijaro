@@ -3073,7 +3073,7 @@ public class Lower extends TreeTranslator {
             result = access(tree.sym, tree, enclOp, qualifiedSuperAccess);
     }
 
-    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
         System.out.println("Lower (Start)");
         
         // start process of changing the AST

@@ -219,13 +219,13 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static final int SELECT = INDEXED + 1;
 
-    /** Selections, of type MethodReference.
+    /** Selections, of type MemberReference.
      */
-    public static final int METHODREFERENCE = SELECT + 1;
+    public static final int MEMBERREFERENCE = SELECT + 1;
 
     /** Simple identifiers, of type Ident.
      */
-    public static final int IDENT = METHODREFERENCE + 1;
+    public static final int IDENT = MEMBERREFERENCE + 1;
 
     /** Literals, of type Literal.
      */
@@ -1668,14 +1668,14 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
-     * A method reference or method literal.
+     * A member reference.
      */
-    public static class JCMethodReference extends JCExpression implements MethodReferenceTree {
+    public static class JCMemberReference extends JCExpression implements MemberReferenceTree {
         // FCM-MREF
         public JCExpression target;
         public Name name;
         public List<JCExpression> types;
-        protected JCMethodReference(
+        protected JCMemberReference(
                 JCExpression target,
                 Name identifier,
                 List<JCExpression> types) {
@@ -1684,9 +1684,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
             this.types = (types == null) ? List.<JCExpression>nil() : types;
         }
         @Override
-        public void accept(Visitor v) { v.visitMethodReference(this); }
+        public void accept(Visitor v) { v.visitMemberReference(this); }
 
-        public Kind getKind() { return Kind.METHOD_REFERENCE; }
+        public Kind getKind() { return Kind.MEMBER_REFERENCE; }
         public JCExpression getTarget() { return target; }
         public Name getName() { return name; }
         public List<JCExpression> getTypes() {
@@ -1694,15 +1694,15 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         }
         @Override
         public <R,D> R accept(TreeVisitor<R,D> v, D d) {
-            return v.visitMethodReference(this, d);
+            return v.visitMemberReference(this, d);
         }
         @Override
-        public JCMethodReference setType(Type type) {
+        public JCMemberReference setType(Type type) {
             super.setType(type);
             return this;
         }
         public int getTag() {
-            return METHODREFERENCE;
+            return MEMBERREFERENCE;
         }
     }
 
@@ -2207,7 +2207,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitTypeTest(JCInstanceOf that)         { visitTree(that); }
         public void visitIndexed(JCArrayAccess that)         { visitTree(that); }
         public void visitSelect(JCFieldAccess that)          { visitTree(that); }
-        public void visitMethodReference(JCMethodReference that) { visitTree(that); }  // FCM-MREF
+        public void visitMemberReference(JCMemberReference that) { visitTree(that); }  // FCM-MREF
         public void visitIdent(JCIdent that)                 { visitTree(that); }
         public void visitLiteral(JCLiteral that)             { visitTree(that); }
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }
