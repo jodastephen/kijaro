@@ -1,3 +1,5 @@
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 public class FCM {
@@ -32,7 +34,36 @@ public class FCM {
 //        Method m = FCM.DUMMY#fixed(String);  // succeeds = OK
 //        Method m = Dummy.Inner#inner(String);  // succeeds = OK
         System.out.println(m.getName());
-        m.invoke(dummy, "Hello");
+        m.invoke(dummy, "Hello", true);
+        
+        Field f = Dummy#message;  // succeeds = OK
+        System.out.println(f.getName());
+        System.out.println(f.get(dummy));
+        
+        Constructor c = Dummy#(String);  // succeeds = OK
+        System.out.println(c.getName());
+        Dummy created = (Dummy) c.newInstance("great");
+        created.shout("This is ");
+    }
+
+    private static Field findField(Class<?> cls, String name) {
+        try {
+            return cls.getDeclaredField(name);
+        } catch (SecurityException ex) {
+            throw new NoSuchMethodError(ex.getMessage());
+        } catch (NoSuchFieldException ex) {
+            throw new NoSuchMethodError(ex.getMessage());
+        }
+    }
+
+    private static Constructor findConstructor(Class<?> cls, Class<?>... types) {
+        try {
+            return cls.getDeclaredConstructor(types);
+        } catch (SecurityException ex) {
+            throw new NoSuchMethodError(ex.getMessage());
+        } catch (NoSuchMethodException ex) {
+            throw new NoSuchMethodError(ex.getMessage());
+        }
     }
 
     private static Method findMethod(Class<?> cls, String name, Class<?>... types) {
