@@ -399,8 +399,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCMethodReference MethodReference(JCExpression target, Name name, List<JCExpression> types) {
-        JCMethodReference tree = new JCMethodReference(target, name, types);
+    public JCMemberReference MemberReference(JCExpression target, Name name, List<JCExpression> types) {
+        JCMemberReference tree = new JCMemberReference(target, name, types);
         tree.pos = pos;
         return tree;
     }

@@ -2430,8 +2430,8 @@ public class Attr extends JCTree.Visitor {
         }
     }
 
-    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
-        System.out.println("Attr.visitMethodReference (Start)");
+    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
+        System.out.println("Attr.visitMemberReference (Start)");
         
         // return type of j.u.r.Method
         tree.type = syms.reflectMethodType;
@@ -2449,7 +2449,7 @@ public class Attr extends JCTree.Visitor {
 //      tree.resolved = sym;
         result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
         
-        System.out.println("Attr.visitMethodReference (End)");
+        System.out.println("Attr.visitMemberReference (End)");
     }
 
     public void visitLiteral(JCLiteral tree) {

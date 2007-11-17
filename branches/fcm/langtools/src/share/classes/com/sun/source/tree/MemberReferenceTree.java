@@ -32,14 +32,14 @@ import java.util.List;
 import javax.lang.model.element.Name;
 
 /**
- * A tree node for a method reference expression.
+ * A tree node for a member reference expression.
  *
  * For example:
  * <pre>
  *   <em>type</em> # <em>identifier</em> ( <em>types</em> )
  * </pre>
  */
-public interface MethodReferenceTree extends ExpressionTree {  // FCM-MREF
+public interface MemberReferenceTree extends ExpressionTree {  // FCM-MREF
     Tree getTarget();
     Name getName();
     List<? extends ExpressionTree> getTypes();

@@ -715,7 +715,7 @@ public class TransTypes extends TreeTranslator {
         }
     }
 
-    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
         // needed to avoid expression type being removed by superclass
         tree.target = translate(tree.target, null);
         tree.types = translate(tree.types, null);

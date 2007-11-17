@@ -339,7 +339,7 @@ public class TreeTranslator extends JCTree.Visitor {
         result = tree;
     }
 
-    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
         tree.target = translate(tree.target);
         tree.types = translate(tree.types);
         result = tree;

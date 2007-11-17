@@ -1019,7 +1019,7 @@ public class Pretty extends JCTree.Visitor {
         }
     }
 
-    public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
+    public void visitMemberReference(JCMemberReference tree) {  // FCM-MREF
         try {
             printExpr(tree.target, TreeInfo.postfixPrec);
             print("#" + tree.name);

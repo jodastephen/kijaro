@@ -1045,7 +1045,7 @@ public class Parser {
                 case HASH:  // FCM-MREF
                     // type-or-variable # identifier
                     if ((mode & EXPR) != 0) {
-                        mode = EXPR;  // whole of the method reference is an expression
+                        mode = EXPR;  // whole of the member reference is an expression
                         System.out.println("Processing # (A)");
                         System.out.println(" Mode " + mode);
                         System.out.println(" Token " + S.token());
@@ -1069,7 +1069,7 @@ public class Parser {
                         } else {
                             List<JCExpression> types = types();
                             System.out.println(" Types " + types);
-                            t = toP(F.at(pos).MethodReference(primary, name, types));
+                            t = toP(F.at(pos).MemberReference(primary, name, types));
                             System.out.println(" Token " + S.token());
                         }
                     }
@@ -1170,7 +1170,7 @@ public class Parser {
                 } else {
                     List<JCExpression> types = types();
                     System.out.println(" Types " + types);
-                    t = toP(F.at(pos).MethodReference(primary, name, types));
+                    t = toP(F.at(pos).MemberReference(primary, name, types));
                     System.out.println(" Token " + S.token());
                 }
                 break;
@@ -2774,7 +2774,7 @@ public class Parser {
         case JCTree.PLUS_ASG: case JCTree.MINUS_ASG:
         case JCTree.MUL_ASG: case JCTree.DIV_ASG: case JCTree.MOD_ASG:
         case JCTree.APPLY: case JCTree.NEWCLASS:
-        case JCTree.METHODREFERENCE: case JCTree.ERRONEOUS:  // FCM-MREF
+        case JCTree.MEMBERREFERENCE: case JCTree.ERRONEOUS:  // FCM-MREF
             return t;
         default:
             log.error(t.pos, "not.stmt");
