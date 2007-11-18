@@ -361,6 +361,12 @@ public class TreeTranslator extends JCTree.Visitor {
         tree.arguments = translate(tree.arguments);
         result = tree;
     }
+    
+    @Override
+    public void visitContract(JCContract tree) {
+    	tree.interfaze = translate(tree.interfaze);
+    	result = tree;
+    }
 
     public void visitTypeParameter(JCTypeParameter tree) {
         tree.bounds = translate(tree.bounds);

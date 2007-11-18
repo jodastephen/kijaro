@@ -227,6 +227,11 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
     public R visitParameterizedType(ParameterizedTypeTree node, P p) {
         return defaultAction(node, p);
     }
+    
+    @Override
+    public R visitContract(ContractTree node, P p) { // CONTRACTS
+    	return defaultAction(node, p);
+    }
 
     public R visitTypeParameter(TypeParameterTree node, P p) {
         return defaultAction(node, p);

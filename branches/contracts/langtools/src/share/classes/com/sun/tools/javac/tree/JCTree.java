@@ -41,7 +41,6 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
-import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
 
 import static com.sun.tools.javac.code.BoundKind.*;
@@ -238,6 +237,10 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     /** Parameterized types, of type TypeApply.
      */
     public static final int TYPEAPPLY = TYPEARRAY + 1;
+    
+    /** Contract.
+     */
+    public static final int CONTRACT = TYPEAPPLY + 1; // CONTRACTS
 
     /** Formal type parameters, of type TypeParameter.
      */
@@ -1855,6 +1858,36 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
+     * A contract defining type, static T
+     */
+    public static class JCContract extends JCExpression implements ContractTree { // CONTRACTS
+    	public JCExpression interfaze;
+    	protected JCContract(JCExpression interfaze) {
+    		this.interfaze = interfaze;
+		}
+		@Override
+		public void accept(Visitor v) {
+			v.visitContract(this);
+		}
+		@Override
+		public <R, D> R accept(TreeVisitor<R, D> v, D d) {
+			return v.visitContract(this, d);
+		}
+		@Override
+		public int getTag() {
+			return CONTRACT;
+		}
+		@Override
+		public JCTree getType() {
+			return interfaze;
+		}
+		@Override
+		public Kind getKind() {
+			return Kind.CONTRACT;
+		}
+    }
+    
+    /**
      * A formal class parameter.
      * @param name name
      * @param bounds bounds
@@ -2115,6 +2148,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         JCPrimitiveTypeTree TypeIdent(int typetag);
         JCArrayTypeTree TypeArray(JCExpression elemtype);
         JCTypeApply TypeApply(JCExpression clazz, List<JCExpression> arguments);
+        JCContract Contract(JCExpression interfaze); // CONTRACTS
         JCTypeParameter TypeParameter(Name name, List<JCExpression> bounds);
         JCWildcard Wildcard(TypeBoundKind kind, JCTree type);
         TypeBoundKind TypeBoundKind(BoundKind kind);
@@ -2128,7 +2162,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static abstract class Visitor {
         public void visitTopLevel(JCCompilationUnit that)    { visitTree(that); }
-        public void visitImport(JCImport that)               { visitTree(that); }
+		public void visitImport(JCImport that)               { visitTree(that); }
         public void visitClassDef(JCClassDecl that)          { visitTree(that); }
         public void visitMethodDef(JCMethodDecl that)        { visitTree(that); }
         public void visitVarDef(JCVariableDecl that)         { visitTree(that); }
@@ -2169,6 +2203,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }
         public void visitTypeArray(JCArrayTypeTree that)     { visitTree(that); }
         public void visitTypeApply(JCTypeApply that)         { visitTree(that); }
+        public void visitContract(JCContract that)           { visitTree(that); } // CONTRACTS
         public void visitTypeParameter(JCTypeParameter that) { visitTree(that); }
         public void visitWildcard(JCWildcard that)           { visitTree(that); }
         public void visitTypeBoundKind(TypeBoundKind that)   { visitTree(that); }

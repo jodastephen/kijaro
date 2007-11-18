@@ -95,6 +95,7 @@ public interface TreeVisitor<R,P> {
     R visitCompilationUnit(CompilationUnitTree node, P p);
     R visitTry(TryTree node, P p);
     R visitParameterizedType(ParameterizedTypeTree node, P p);
+    R visitContract(ContractTree node, P p); // CONTRACTS
     R visitArrayType(ArrayTypeTree node, P p);
     R visitTypeCast(TypeCastTree node, P p);
     R visitPrimitiveType(PrimitiveTypeTree node, P p);

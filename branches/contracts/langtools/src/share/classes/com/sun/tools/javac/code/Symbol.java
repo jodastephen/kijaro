@@ -794,6 +794,18 @@ public abstract class Symbol implements Element {
                 return List.nil();
             }
         }
+        
+        public List<Type> getContracts() { // CONTRACTS
+        	complete();
+        	if (type instanceof ClassType) {
+                ClassType t = (ClassType)type;
+                if (t.contracts_field == null) // FIXME: shouldn't be null
+                    t.contracts_field = List.nil();
+                return t.contracts_field;
+            } else {
+                return List.nil();
+        	}
+        }
 
         public Type getSuperclass() {
             complete();

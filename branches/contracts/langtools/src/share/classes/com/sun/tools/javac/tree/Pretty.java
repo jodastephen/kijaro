@@ -1143,6 +1143,16 @@ public class Pretty extends JCTree.Visitor {
             throw new UncheckedIOException(e);
         }
     }
+    
+    @Override
+    public void visitContract(JCContract tree) {
+    	try {
+    		print("static ");
+			printExpr(tree.interfaze);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+    }
 
     public void visitTypeParameter(JCTypeParameter tree) {
         try {

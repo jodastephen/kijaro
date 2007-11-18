@@ -147,6 +147,9 @@ public enum Source {
     public boolean allowAnonOuterThis() {
         return compareTo(JDK1_5) >= 0;
     }
+    public boolean allowContracts() { // CONTRACTS
+    	return compareTo(JDK1_7) >= 0;
+    }
     public boolean addBridges() {
         return compareTo(JDK1_5) >= 0;
     }

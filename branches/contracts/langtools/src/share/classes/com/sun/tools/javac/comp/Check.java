@@ -1511,6 +1511,11 @@ public class Check {
                     if (clazz.interfaces_field != null)
                         for (List<Type> l=clazz.interfaces_field; l.nonEmpty(); l=l.tail)
                             complete &= checkNonCyclicInternal(pos, l.head);
+                    if (clazz.contracts_field != null) {// CONTRACTS
+                    	for (List<Type> l=clazz.contracts_field; l.nonEmpty(); l=l.tail) {
+                    		complete &= checkNonCyclicInternal(pos, l.head);
+                    	}
+                    }
                     if (clazz.supertype_field != null) {
                         Type st = clazz.supertype_field;
                         if (st != null && st.tag == CLASS)

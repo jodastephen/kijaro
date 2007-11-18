@@ -27,6 +27,8 @@ package com.sun.tools.javac.code;
 
 import java.util.*;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
 
@@ -1735,6 +1737,37 @@ public class Types {
         };
     // </editor-fold>
 
+    // <editor-fold defaultstate="collapsed" desc="contracts"> // CONTRACTS
+    /**
+     * Return the interfaces implemented by this class.
+     */
+    public List<Type> contracts(Type t) {
+        return contracts.visit(t);
+    }
+    // where
+        private UnaryVisitor<List<Type>> contracts = new UnaryVisitor<List<Type>>() {
+
+            public List<Type> visitType(Type t, Void ignored) {
+                return List.nil();
+            }
+
+            @Override
+            public List<Type> visitClassType(ClassType t, Void ignored) {
+            	// TODO: Simply return the list?
+            	if (t.contracts_field == null) { // FIXME: should not be null
+            		return List.nil();
+            	}
+                return t.contracts_field;
+            }
+
+            @Override
+            public List<Type> visitTypeVar(TypeVar t, Void ignored) {
+            	// TODO
+            	throw new NotImplementedException();
+            }
+        };
+    // </editor-fold>
+        
     // <editor-fold defaultstate="collapsed" desc="isDerivedRaw">
     Map<Type,Boolean> isDerivedRawCache = new HashMap<Type,Boolean>();
 

@@ -474,15 +474,30 @@ public class PrintingProcessor extends AbstractProcessor {
 
             if(kind != ANNOTATION_TYPE) {
                 List<? extends TypeMirror> interfaces = e.getInterfaces();
+                boolean first = true; // CONTRACTS
                 if (interfaces.size() > 0) {
                     writer.print((kind.isClass() ? " implements" : " extends"));
 
-                    boolean first = true;
+//                    boolean first = true; // CONTRACTS
                     for(TypeMirror interf: interfaces) {
                         if (!first)
                             writer.print(",");
                         writer.print(" ");
                         writer.print(interf.toString());
+                        first = false;
+                    }
+                }
+                List<? extends TypeMirror> contracts = e.getContracts(); // CONTRACTS
+                if (contracts.size() > 0) {
+                	if (first) {
+                        writer.print(" implements");
+                	}
+                    for(TypeMirror contract : contracts) {
+                        if (!first) {
+                        	writer.print(",");
+                        }
+                        writer.print(" ");
+                        writer.print(contract.toString());
                         first = false;
                     }
                 }

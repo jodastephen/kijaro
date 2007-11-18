@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 import javax.lang.model.element.ElementKind;
 import javax.tools.JavaFileObject;
 
@@ -113,6 +112,7 @@ public class Attr extends JCTree.Visitor {
         allowBoxing = source.allowBoxing();
         allowCovariantReturns = source.allowCovariantReturns();
         allowAnonOuterThis = source.allowAnonOuterThis();
+        allowContracts = source.allowContracts();
         relax = (options.get("-retrofit") != null ||
                  options.get("-relax") != null);
         useBeforeDeclarationWarning = options.get("useBeforeDeclarationWarning") != null;
@@ -146,6 +146,11 @@ public class Attr extends JCTree.Visitor {
      * objects during constructor call?
      */
     boolean allowAnonOuterThis;
+    
+    /** Switch: allow static implementations of interfaces
+     * a.k.a. Contracts
+     */
+    boolean allowContracts; // CONTRACTS
 
     /**
      * Switch: warn about use of variable before declaration?
@@ -2496,6 +2501,11 @@ public class Attr extends JCTree.Visitor {
             }
         }
         result = check(tree, owntype, TYP, pkind, pt);
+    }
+    
+    @Override
+    public void visitContract(JCContract that) {
+    	that.interfaze.accept(this);
     }
 
     public void visitTypeParameter(JCTypeParameter tree) {
