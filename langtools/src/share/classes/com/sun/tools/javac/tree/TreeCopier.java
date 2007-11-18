@@ -25,7 +25,6 @@
 
 package com.sun.tools.javac.tree;
 
-import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.util.List;
@@ -337,6 +336,13 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCExpression clazz = copy(t.clazz, p);
         List<JCExpression> arguments = copy(t.arguments, p);
         return M.at(t.pos).TypeApply(clazz, arguments);
+    }
+    
+    @Override
+    public JCTree visitContract(ContractTree node, P p) {
+    	JCContract t = (JCContract) node;
+    	JCExpression interfaze = copy(t.interfaze, p);
+    	return M.at(t.pos).Contract(interfaze);
     }
 
     public JCTree visitArrayType(ArrayTypeTree node, P p) {

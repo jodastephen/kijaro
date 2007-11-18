@@ -352,6 +352,10 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         r = scanAndReduce(node.getTypeArguments(), p, r);
         return r;
     }
+    
+    public R visitContract(ContractTree node, P p) { // CONTRACTS
+    	return scan(node.getType(), p);
+    }
 
     public R visitTypeParameter(TypeParameterTree node, P p) {
         return scan(node.getBounds(), p);

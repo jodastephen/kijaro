@@ -855,6 +855,7 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
 
             // Determine interfaces.
             ListBuffer<Type> interfaces = new ListBuffer<Type>();
+            ListBuffer<Type> contracts = new ListBuffer<Type>(); // CONTRACTS
             Set<Type> interfaceSet = new HashSet<Type>();
             List<JCExpression> interfaceTrees = tree.implementing;
             if ((tree.mods.flags & Flags.ENUM) != 0 && target.compilerBootstrap(c)) {
@@ -868,16 +869,25 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
                     interfaceTrees.prepend(make.Type(syms.serializableType));
             }
             for (JCExpression iface : interfaceTrees) {
-                Type i = attr.attribBase(iface, baseEnv, false, true, true);
+            	Type i = attr.attribBase(iface, baseEnv, false, true, true);
                 if (i.tag == CLASS) {
-                    interfaces.append(i);
+                	if (iface instanceof JCContract) {
+						contracts.append(i);
+					} else {
+						interfaces.append(i);
+					}
                     chk.checkNotRepeated(iface.pos(), types.erasure(i), interfaceSet);
                 }
             }
-            if ((c.flags_field & ANNOTATION) != 0)
+            if ((c.flags_field & ANNOTATION) != 0) {
                 ct.interfaces_field = List.of(syms.annotationType);
-            else
+                if (!contracts.isEmpty()) {
+                	log.error(tree.pos, "compiler.err.cant.contract.intf.annotation");
+                }
+            } else {
                 ct.interfaces_field = interfaces.toList();
+                ct.contracts_field = contracts.toList();
+            }
 
             if (c.fullname == names.java_lang_Object) {
                 if (tree.extending != null) {

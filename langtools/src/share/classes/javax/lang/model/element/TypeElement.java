@@ -107,6 +107,14 @@ public interface TypeElement extends Element {
      * or extended by this interface, or an empty list if there are none
      */
     List<? extends TypeMirror> getInterfaces();
+    
+    /**
+     * Returns the interface types contracted by this class.
+     * 
+     * @return The contracted interface types or an empty list, if there
+     * are none.
+     */
+    List<? extends TypeMirror> getContracts();
 
     /**
      * Returns the formal type parameters of this type element

@@ -466,6 +466,7 @@ public class Name implements javax.lang.model.element.Name {
             RuntimeInvisibleParameterAnnotations = fromString("RuntimeInvisibleParameterAnnotations");
             Value = fromString("Value");
             EnclosingMethod = fromString("EnclosingMethod");
+            Contracts = fromString("Contracts"); // CONTRACTS
 
             desiredAssertionStatus = fromString("desiredAssertionStatus");
 
@@ -597,6 +598,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name RuntimeInvisibleAnnotations;
         public final Name RuntimeVisibleParameterAnnotations;
         public final Name RuntimeInvisibleParameterAnnotations;
+        public final Name Contracts; // CONTRACTS
 
         public final Name Value;
         public final Name EnclosingMethod;

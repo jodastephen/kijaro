@@ -229,6 +229,11 @@ public interface Tree {
          * Used for instances of {@link ParameterizedTypeTree}.
          */
         PARAMETERIZED_TYPE(ParameterizedTypeTree.class),
+        
+        /**
+         * Used for instances of {@link Contract}.
+         */
+        CONTRACT(ContractTree.class),
 
         /**
          * Used for instances of {@link TypeCastTree}.

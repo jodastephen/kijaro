@@ -428,6 +428,12 @@ public class TreeMaker implements JCTree.Factory {
         tree.pos = pos;
         return tree;
     }
+    
+    public JCContract Contract(JCExpression type) {
+    	JCContract tree = new JCContract(type);
+    	tree.pos = pos;
+    	return tree;
+    }
 
     public JCTypeParameter TypeParameter(Name name, List<JCExpression> bounds) {
         JCTypeParameter tree = new JCTypeParameter(name, bounds);

@@ -398,6 +398,7 @@ public class Symtab {
         proprietaryType.allparams_field = List.nil();
         proprietaryType.supertype_field = annotationType;
         proprietaryType.interfaces_field = List.nil();
+        proprietaryType.contracts_field = List.nil(); // CONTRACTS
 
         // Enter a class for arrays.
         // The class implements java.lang.Cloneable and java.io.Serializable.

@@ -571,6 +571,7 @@ public class Lower extends TreeTranslator {
         ClassType ctype = (ClassType) c.type;
         ctype.supertype_field = syms.objectType;
         ctype.interfaces_field = List.nil();
+        ctype.contracts_field = List.nil();
 
         JCClassDecl odef = classDef(owner);
 
@@ -1979,6 +1980,7 @@ public class Lower extends TreeTranslator {
             ClassType ctype = (ClassType) c.type;
             ctype.supertype_field = syms.objectType;
             ctype.interfaces_field = List.nil();
+            ctype.contracts_field = List.nil();
             packageAnnotationsClass.sym = c;
 
 

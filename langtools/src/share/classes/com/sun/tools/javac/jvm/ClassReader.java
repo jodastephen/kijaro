@@ -95,6 +95,10 @@ public class ClassReader extends ClassFile implements Completer {
     /** Switch: allow annotations.
      */
     boolean allowAnnotations;
+    
+    /** Switch: allow contracts.
+     */
+    boolean allowContracts;
 
     /** Switch: preserve parameter names from the variable table.
      */
@@ -233,6 +237,7 @@ public class ClassReader extends ClassFile implements Completer {
         allowGenerics    = source.allowGenerics();
         allowVarargs     = source.allowVarargs();
         allowAnnotations = source.allowAnnotations();
+        allowContracts   = source.allowContracts(); // CONTRACTS
         saveParameterNames = options.get("save-parameter-names") != null;
         cacheCompletionFailure = options.get("dev") == null;
         preferSource = "source".equals(options.get("-Xprefer"));
@@ -1063,6 +1068,19 @@ public class ClassReader extends ClassFile implements Completer {
             } finally {
                 readingClassAttr = false;
             }
+        } else if (allowContracts && attrName == names.Contracts) { // CONTRACTS
+        	readingClassAttr = true;
+        	try {
+                ClassType ct1 = (ClassType)c.type;
+                assert c == currentOwner;
+                ListBuffer<Type> cs = new ListBuffer<Type>();
+                while (sigp != siglimit) {
+                	cs.append(sigToType());
+                }
+                ct1.contracts_field = cs.toList();
+        	} finally {
+        		readingClassAttr = false;
+        	}
         } else {
             readMemberAttr(c, attrName, attrLen);
         }
@@ -1868,6 +1886,8 @@ public class ClassReader extends ClassFile implements Completer {
                                 types.subst(ct.supertype_field, missing, found);
                             ct.interfaces_field =
                                 types.subst(ct.interfaces_field, missing, found);
+                            ct.contracts_field = // CONTRACTS
+                            	types.subst(ct.contracts_field, missing, found);
                         } else if (missingTypeVariables.isEmpty() !=
                                    foundTypeVariables.isEmpty()) {
                             Name name = missingTypeVariables.head.tsym.name;

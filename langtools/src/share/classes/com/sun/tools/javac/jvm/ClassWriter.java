@@ -27,8 +27,6 @@ package com.sun.tools.javac.jvm;
 
 import java.io.*;
 import java.util.*;
-import java.util.Set;
-import java.util.HashSet;
 
 import javax.tools.JavaFileManager;
 import javax.tools.FileObject;
@@ -1533,6 +1531,19 @@ public class ClassWriter extends ClassFile {
             if (typarams.length() != 0) assembleParamsSig(typarams);
             assembleSig(supertype);
             for (List<Type> l = interfaces; l.nonEmpty(); l = l.tail)
+                assembleSig(l.head);
+            databuf.appendChar(pool.put(sigbuf.toName(names)));
+            sigbuf.reset();
+            endAttr(alenIdx);
+            acount++;
+        }
+        
+        // CONTRACTS
+        List<Type> contracts = types.contracts(c.type);
+        if (!contracts.isEmpty()) {
+        	assert source.allowContracts();
+        	int alenIdx = writeAttr(names.Contracts);
+            for (List<Type> l = contracts; l.nonEmpty(); l = l.tail)
                 assembleSig(l.head);
             databuf.appendChar(pool.put(sigbuf.toName(names)));
             sigbuf.reset();

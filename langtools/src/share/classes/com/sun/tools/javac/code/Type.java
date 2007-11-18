@@ -544,6 +544,10 @@ public class Type implements PrimitiveType {
         /** The interfaces of this class (to be set once class is loaded).
          */
         public List<Type> interfaces_field;
+        
+        /** The contracts of this class (to be set once class is loaded).
+         */
+        public List<Type> contracts_field; // CONTRACTS
 
         public ClassType(Type outer, List<Type> typarams, TypeSymbol tsym) {
             super(CLASS, tsym);
@@ -552,6 +556,7 @@ public class Type implements PrimitiveType {
             this.allparams_field = null;
             this.supertype_field = null;
             this.interfaces_field = null;
+            this.contracts_field = null; // CONTRACTS
             /*
             // this can happen during error recovery
             assert
@@ -607,6 +612,10 @@ public class Type implements PrimitiveType {
                     for (List<Type> is=interfaces_field; is.nonEmpty(); is = is.tail) {
                         s.append("&");
                         s.append(is.head.toString());
+                    }
+                    for (List<Type> cs=contracts_field; cs.nonEmpty(); cs = cs.tail) { // CONTRACTS
+                    	s.append("&$");
+                    	s.append(cs.head.toString());
                     }
                     return s.toString();
                 } else if (sym.name.len == 0) {
