@@ -36,6 +36,8 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
+import java.lang.reflect.InvocationHandler;
 import java.lang.ref.SoftReference;
 import java.io.InputStream;
 import java.io.ObjectStreamField;
@@ -112,11 +114,10 @@ import sun.reflect.annotation.*;
  * @see     java.lang.ClassLoader#defineClass(byte[], int, int)
  * @since   JDK1.0
  */
-public final
-    class Class<T> implements java.io.Serializable,
-                              java.lang.reflect.GenericDeclaration,
-                              java.lang.reflect.Type,
-                              java.lang.reflect.AnnotatedElement {
+public final class Class<T> implements java.io.Serializable,
+				       java.lang.reflect.GenericDeclaration,
+				       java.lang.reflect.Type,
+				       java.lang.reflect.AnnotatedElement {
     private static final int ANNOTATION= 0x00002000;
     private static final int ENUM      = 0x00004000;
     private static final int SYNTHETIC = 0x00001000;
@@ -131,7 +132,6 @@ public final
      * objects.
      */
     private Class() {}
-
 
     /**
      * Converts the object to a string. The string representation is the
@@ -812,6 +812,19 @@ public final
         else
             return getInterfaces();
     }
+
+    /**
+     * Determines the interfaces <em>statically</em> implemented by
+     * the class represented by this object.
+     *
+     * <p>If this object represents an interface, an annotation, a
+     * primitive type or void, the method returns an array of length
+     * 0.
+     *
+     * @return an array of interfaces statically implemented by this class.
+     **/
+    public native Class<?>[] getStaticInterfaces(); // CONTRACTS
+
 
 
     /**
@@ -3118,4 +3131,116 @@ public final
     AnnotationType getAnnotationType() {
         return annotationType;
     }
+
+    // CONTRACTS
+
+    // This is the object that implements all interfaces which the
+    // class is supposed to implement statically.  Calls on this proxy
+    // will invoke static methods with the same signature on the
+    // actual class.
+    private volatile Object contractProxy = null;
+
+    /**
+     * Gets the contract object for this class.  It will be created
+     * once on first demand, and cached thereafter.
+     */
+    private Object getContractProxy() {
+	if (contractProxy != null)
+	    return contractProxy;
+
+	synchronized (this) {
+	    if (contractProxy != null)
+		return contractProxy;
+
+	    return createContractProxy();
+	}
+    }
+
+    private Object createContractProxy() {
+	final Map<Method, Method> translation = new HashMap<Method, Method>();
+	InvocationHandler handler = new InvocationHandler() {
+		public Object invoke(Object proxy,
+				     Method method,
+				     Object[] args) throws Throwable {
+		    return translation.get(method).invoke(null, args);
+		}
+	    };
+
+	Class<?>[] types = getStaticInterfaces();
+
+	// Define the mapping for each interface type.
+        for (Class<?> type : types) {
+	    // Define the mapping for each method in this interface.
+	    for (Method from : type.getMethods()) {
+		try {
+		    Method to = this.getMethod(from.getName(),
+					       from.getParameterTypes());
+
+		    // Do we need to check anything else?  The compiler
+		    // will have checked most details already, and if not,
+		    // some error will happen eventually.
+		    translation.put(from, to);
+		} catch (NoSuchMethodException ex) {
+		    // Um, not sure about this.  LinkageError might be
+		    // more appropriate.
+		    throw new NoSuchMethodError(ex.getMessage());
+		}
+	    }
+	}
+
+	contractProxy = Proxy.newProxyInstance(getClassLoader(),
+					       types, handler);
+
+	return contractProxy;
+    }
+
+    /**
+     * Gets a contract on the class represented by this object.  A
+     * contract is an interface to a class implemented by static
+     * methods.
+     *
+     * @param type the interface type of the contract
+     *
+     * @return an object of that type whose methods call static
+     * methods on this class
+     */
+    public <T> T contractOn(Class<T> type) {
+	return type.cast(getContractProxy());
+    }
+
+    /**
+     * Determines whether the class represented by this object meets a
+     * contract.  That is, it implements an interface type by static
+     * methods.
+     *
+     * @param type the interface type of the contract
+     *
+     * @return true if and only if the class statically implements the
+     * interface type or any of its subinterfaces
+     */
+    public boolean meetsContract(Class<T> type) {
+	Class<?>[] types = getStaticInterfaces();
+	for (Class<?> t : types)
+	    if (type.isAssignableFrom(t))
+		return true;
+	return false;
+    }
+
+    /**
+     * Determines whether some object is the implementation of static
+     * interfaces for the class represented by this object.  That is,
+     * it implements each of the interface types returned by {@link
+     * #getStaticInterfaces()}, and each of its methods maps to a call
+     * to a static method on the class.
+     *
+     * @param obj an object to be tested
+     *
+     * @return true if the object is an implementation of the static
+     * interfaces of the represented class
+     */
+    public boolean contractedBy(Object obj) {
+	return obj == getContractProxy();
+    }
+
+    // CONTRACTS (end)
 }
