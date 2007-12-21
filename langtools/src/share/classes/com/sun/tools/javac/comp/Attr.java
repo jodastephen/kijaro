@@ -2455,10 +2455,10 @@ public class Attr extends JCTree.Visitor {
         Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
         
         // resolve the parameter types
-        List<Type> types = attribParamTypes(tree.types, env);
+        List<Type> paramTypes = attribParamTypes(tree.types, env);
         
         // validate that constructor exists and is accessible
-        Symbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, types, null);
+        Symbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, paramTypes, null);
         System.out.println("Matched:" + sym);
         
         // assign and check types
@@ -2476,14 +2476,33 @@ public class Attr extends JCTree.Visitor {
         Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
         
         // resolve the parameter types
-        List<Type> types = attribParamTypes(tree.types, env);
+        List<Type> paramTypes = attribParamTypes(tree.types, env);
         
         // validate that method exists and is accessible
-        Symbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, types, null);
+        MethodSymbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, paramTypes, null);
         System.out.println("Matched:" + sym);
         
         // assign and check types
-        result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
+        MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
+        if (smiMethod != null) {
+            if (types.isSameType(smiMethod.asType(), sym.asType())) {
+                // matching smi
+                tree.conversionClassType = (ClassType) pt;
+                tree.conversionMethodType = (MethodType) smiMethod.asType();
+                result = check(tree, pt, VAL, pkind, pt);
+            } else {
+                // smi, but method type does not match - provide separate error message
+                tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.smi"), sym.asType(), smiMethod.asType());
+                result = tree.type;
+            }
+        } else if (pt.isInterface()) {
+            // interface, but not smi - provide separate error message
+            tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.non.smi"), sym.asType(), pt);
+            result = tree.type;
+        } else {
+            // check for java.util.reflect.Method
+            result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
+        }
         
         System.out.println("Attr.visitMethodReference (End)");
     }

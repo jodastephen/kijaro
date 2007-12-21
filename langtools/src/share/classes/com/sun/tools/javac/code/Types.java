@@ -27,10 +27,13 @@ package com.sun.tools.javac.code;
 
 import java.util.*;
 
+import javax.lang.model.element.ElementKind;
+
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
 
 import com.sun.tools.javac.jvm.ClassReader;
+import com.sun.tools.javac.code.Symbol.MethodSymbol;
 import com.sun.tools.javac.comp.Infer;
 import com.sun.tools.javac.comp.Check;
 
@@ -692,6 +695,28 @@ public class Types {
             }
         };
     // </editor-fold>
+
+    /**
+     * Checks if the 'class' represents a single method interface.
+     * The methods inherited from Object do not count in the definition.
+     * @return the single method symbol, or null if not a single method interface
+     */
+    public MethodSymbol singleMethodInterfaceMethodSymbol(Type t) {  // FCM-MREF
+        if (t.isInterface()) {
+            java.util.List<Symbol> list = t.tsym.getEnclosedElements();
+            for (Iterator<Symbol> it = list.iterator(); it.hasNext(); ) {
+                Symbol symbol = it.next();
+                if (symbol.getKind() != ElementKind.METHOD || symbol instanceof MethodSymbol == false) {
+                    it.remove();
+                }
+                // TODO: remove methods also on Object
+            }
+            if (list.size() == 1) {
+                return (MethodSymbol) list.get(0);
+            }
+        }
+        return null;
+    }
 
     // <editor-fold defaultstate="collapsed" desc="Contains Type">
     public boolean containedBy(Type t, Type s) {

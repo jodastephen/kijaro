@@ -41,6 +41,8 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
+import com.sun.tools.javac.code.Type.ClassType;
+import com.sun.tools.javac.code.Type.MethodType;
 import com.sun.source.tree.*;
 import com.sun.source.tree.Tree.Kind;
 
@@ -1751,6 +1753,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public JCExpression target;
         public Name name;
         public List<JCExpression> types;
+        public ClassType conversionClassType;
+        public MethodType conversionMethodType;
         protected JCMethodReference(
                 JCExpression target,
                 Name identifier,
