@@ -382,9 +382,9 @@ public class Type implements PrimitiveType {
      */
     public void complete() {}
 
-    public Object clone() {
+    public Type clone() {
         try {
-            return super.clone();
+            return (Type) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new AssertionError(e);
         }
@@ -1023,7 +1023,7 @@ public class Type implements PrimitiveType {
         public List<Type> getThrownTypes() { return qtype.getThrownTypes(); }
         public List<Type> allparams() { return qtype.allparams(); }
         public Type getUpperBound() { return qtype.getUpperBound(); }
-        public Object clone() { DelegatedType t = (DelegatedType)super.clone(); t.qtype = (Type)qtype.clone(); return t; }
+        public DelegatedType clone() { DelegatedType t = (DelegatedType)super.clone(); t.qtype = (Type)qtype.clone(); return t; }
         public boolean isErroneous() { return qtype.isErroneous(); }
     }
 
@@ -1051,7 +1051,7 @@ public class Type implements PrimitiveType {
             qtype.setThrown(t);
         }
 
-        public Object clone() {
+        public ForAll clone() {
             ForAll result = (ForAll)super.clone();
             result.qtype = (Type)result.qtype.clone();
             return result;
