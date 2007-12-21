@@ -21,6 +21,7 @@ public class FCM {
     public void process() throws Exception {
 //        Dummy dummy = dummy;
         System.out.println("Hello FCM");
+//        Method m = new Dummy("Hi")#fixed(String,boolean);  // fails = BUG
 //        Method m = Dummy#fixed(String);  // succeeds = OK
 //        Method m = Dummy#fixed(boolean);  // succeeds = OK
         Method m = Dummy#fixed(String,boolean);  // succeeds = OK
@@ -40,7 +41,9 @@ public class FCM {
         System.out.println(f.getName());
         System.out.println(f.get(dummy));
         
-        Constructor c = Dummy#(String);  // succeeds = OK
+//        Constructor c = Dummy#(String);  // succeeds = OK
+//        Constructor<?> c = Dummy#(String);  // succeeds = OK
+        Constructor<Dummy> c = Dummy#(String);  // succeeds = OK
         System.out.println(c.getName());
         Dummy created = (Dummy) c.newInstance("great");
         created.shout("This is ");
