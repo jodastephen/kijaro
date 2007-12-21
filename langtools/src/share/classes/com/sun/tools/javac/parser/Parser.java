@@ -25,6 +25,7 @@
 
 package com.sun.tools.javac.parser;
 
+import java.io.IOException;
 import java.util.*;
 
 import com.sun.tools.javac.tree.*;
@@ -1046,41 +1047,41 @@ public class Parser {
                     // type-or-variable # identifier
                     if ((mode & EXPR) != 0) {
                         mode = EXPR;  // whole of the member reference is an expression
-                        System.out.println("Processing # (A)");
-                        System.out.println(" Mode " + mode);
-                        System.out.println(" Token " + S.token());
-                        System.out.println(" TName " + S.name());
+//                        System.out.println("Processing # (A)");
+//                        System.out.println(" Mode " + mode);
+//                        System.out.println(" Token " + S.token());
+//                        System.out.println(" TName " + S.name());
                         
                         S.nextToken();
-                        System.out.println(" Token " + S.token());
-                        System.out.println(" TName " + S.name());
+//                        System.out.println(" Token " + S.token());
+//                        System.out.println(" TName " + S.name());
                         if (typeArgs != null) {
                             return illegal();
                         }
                         JCExpression primary = t;
-                        System.out.println(" Primary " + primary);
+//                        System.out.println(" Primary " + primary);
                         if (S.token() == LPAREN) {
-                            System.out.println(" Constructor reference");
+//                            System.out.println(" Constructor reference");
                             List<JCExpression> types = types();
-                            System.out.println(" Types " + types);
+//                            System.out.println(" Types " + types);
                             t = toP(F.at(pos).ConstructorReference(primary, types));
-                            System.out.println(" Token " + S.token());
+//                            System.out.println(" Token " + S.token());
                             
                         } else if (S.token() == IDENTIFIER) {
                             Name name = ident();  // calls S.nextToken()
-                            System.out.println(" Name " + name);
+//                            System.out.println(" Name " + name);
                             
-                            System.out.println(" Token " + S.token());
+//                            System.out.println(" Token " + S.token());
                             if (S.token() != LPAREN) {
-                                System.out.println(" Field reference");
+//                                System.out.println(" Field reference");
                                 t = toP(F.at(pos).FieldReference(primary, name));
-                                System.out.println(" Token " + S.token());
+//                                System.out.println(" Token " + S.token());
                             } else {
-                                System.out.println(" Method reference");
+//                                System.out.println(" Method reference");
                                 List<JCExpression> types = types();
-                                System.out.println(" Types " + types);
+//                                System.out.println(" Types " + types);
                                 t = toP(F.at(pos).MethodReference(primary, name, types));
-                                System.out.println(" Token " + S.token());
+//                                System.out.println(" Token " + S.token());
                             }
                         } else {
                             return illegal();
@@ -1094,6 +1095,51 @@ public class Parser {
             if (typeArgs != null) illegal();
             t = typeArgumentsOpt(t);
             break;
+//        case HASH:  // FCM-MTYPE
+////            System.out.println("Processing #(methodType)");
+//            if ((mode & TYPE) == 0) {
+//                illegal();
+//            }
+//            // TODO: This parsing is all wrong - it needs a new AST element
+//            int mtStartPos = pos;
+//            S.nextToken();
+//            accept(LPAREN);
+//            String str = "#(";
+//            if (S.token() == VOID) {
+//                str += "void";
+//                S.nextToken();
+//            } else {
+//                JCExpression type = type();
+//                str += type.toString();
+//            }
+//            accept(LPAREN);
+//            str += "(";
+//            if (S.token() != RPAREN) {
+//                if (S.token() == VOID) {
+//                    str += "void";
+//                    S.nextToken();
+//                } else {
+//                    JCExpression type = type();
+//                    str += type.toString();
+//                }
+//                while (S.token() == COMMA) {
+//                    str += ",";
+//                    S.nextToken();
+//                    if (S.token() == VOID) {
+//                        str += "void";
+//                        S.nextToken();
+//                    } else {
+//                        JCExpression type = type();
+//                        str += type.toString();
+//                    }
+//                }
+//            }
+//            accept(RPAREN);
+//            accept(RPAREN);
+//            str += "))";
+////            System.out.println("Processing #(methodType) - " + str);
+//            t = toP(F.at(mtStartPos).Ident(names.fromString(str)));
+//            break;
         case BYTE: case SHORT: case CHAR: case INT: case LONG: case FLOAT:
         case DOUBLE: case BOOLEAN:
             if (typeArgs != null) illegal();
@@ -1161,40 +1207,40 @@ public class Parser {
                     typeArgs = null;
                 }
             } else if (S.token() == HASH) {  // FCM-MREF
-                System.out.println("Processing # (B)");
-                System.out.println(" Token " + S.token());
-                System.out.println(" TName " + S.name());
+//                System.out.println("Processing # (B)");
+//                System.out.println(" Token " + S.token());
+//                System.out.println(" TName " + S.name());
                 
                 S.nextToken();
-                System.out.println(" Token " + S.token());
-                System.out.println(" TName " + S.name());
+//                System.out.println(" Token " + S.token());
+//                System.out.println(" TName " + S.name());
                 if (typeArgs != null) {
                     return illegal();
                 }
                 JCExpression primary = t;
-                System.out.println(" Primary " + primary);
+//                System.out.println(" Primary " + primary);
                 if (S.token() == LPAREN) {
-                    System.out.println(" Constructor reference");
+//                    System.out.println(" Constructor reference");
                     List<JCExpression> types = types();
-                    System.out.println(" Types " + types);
+//                    System.out.println(" Types " + types);
                     t = toP(F.at(pos).ConstructorReference(primary, types));
-                    System.out.println(" Token " + S.token());
+//                    System.out.println(" Token " + S.token());
                     
                 } else if (S.token() == IDENTIFIER) {
                     Name name = ident();  // calls S.nextToken()
-                    System.out.println(" Name " + name);
+//                    System.out.println(" Name " + name);
                     
-                    System.out.println(" Token " + S.token());
+//                    System.out.println(" Token " + S.token());
                     if (S.token() != LPAREN) {
-                        System.out.println(" Field reference");
+//                        System.out.println(" Field reference");
                         t = toP(F.at(pos).FieldReference(primary, name));
-                        System.out.println(" Token " + S.token());
+//                        System.out.println(" Token " + S.token());
                     } else {
-                        System.out.println(" Method reference");
+//                        System.out.println(" Method reference");
                         List<JCExpression> types = types();
-                        System.out.println(" Types " + types);
+//                        System.out.println(" Types " + types);
                         t = toP(F.at(pos).MethodReference(primary, name, types));
-                        System.out.println(" Token " + S.token());
+//                        System.out.println(" Token " + S.token());
                     }
                 } else {
                     return illegal();
