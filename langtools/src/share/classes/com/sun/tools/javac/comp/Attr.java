@@ -2442,7 +2442,6 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Matched:" + sym);
         
         // assign and check types
-        tree.type = syms.reflectFieldType;
         result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
         
         System.out.println("Attr.visitFieldReference (End)");
@@ -2463,8 +2462,8 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Matched:" + sym);
         
         // assign and check types
-        tree.type = syms.reflectConstructorType;
-        result = check(tree, syms.reflectConstructorType, VAL, pkind, pt);
+        ClassType typedConstructor = new ClassType(Type.noType, List.of(site), syms.reflectConstructorType.asElement());
+        result = check(tree, typedConstructor, VAL, pkind, pt);
         
         System.out.println("Attr.visitConstructorReference (End)");
     }
@@ -2484,7 +2483,6 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Matched:" + sym);
         
         // assign and check types
-        tree.type = syms.reflectMethodType;
         result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
         
         System.out.println("Attr.visitMethodReference (End)");
