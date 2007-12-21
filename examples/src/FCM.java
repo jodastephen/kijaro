@@ -47,6 +47,16 @@ public class FCM {
         System.out.println(c.getName());
         Dummy created = (Dummy) c.newInstance("great");
         created.shout("This is ");
+        
+//        #(String(int,Object)) mt = null;
+//        #(String(int,#(void()))) mt = null;
+//        
+//        {int,{=> void} => String} mt = null;
+//        #(String(int,#(void()))) mt = null;
+//        Fn#String(int,Fn#void()) mt = null;
+//        Fn<String(int,Fn<void()>)> mt = null;
+//        Fn<int, Fn<return void> return String> mt = null;
+////        Fn<int, Fn<=> void> => String> mt = null;
     }
 
     private static Field findField(Class<?> cls, String name) {
