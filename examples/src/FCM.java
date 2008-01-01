@@ -49,7 +49,7 @@ public class FCM {
         local.inner = new FCM("LocalInner");
 //        ActionListener lnrLocal = FCM.this#handleLocalAction(ActionEvent);  // Main
 //        ActionListener lnrLocal = this#handleLocalAction(ActionEvent);  // Main
-//        ActionListener lnrLocal = #handleLocalAction(ActionEvent);  // NOT IMPLEMENTED
+//       ActionListener lnrLocal = #handleLocalAction(ActionEvent);  // Main
 //        ActionListener lnrLocal = FCM.this.inner#handleLocalAction(ActionEvent);  // MainInner
 //        ActionListener lnrLocal = this.inner#handleLocalAction(ActionEvent);  // MainInner
 //        ActionListener lnrLocal = inner#handleLocalAction(ActionEvent);  // MainInner
@@ -63,12 +63,12 @@ public class FCM {
     }
 
     public void processConstructorReference() throws Exception {
-//        StringIntegerFactory ft = this#(String);
+//        StringIntegerFactory ft = #(String);
 //        System.out.println(ft);
 //        FCM instance = ft.create("2");
 //        System.out.println(instance);
         
-        StringIntegerFactory f = this#convertStringToInteger(String);
+        StringIntegerFactory f = #convertStringToInteger(String);
         System.out.println(f);
         Integer int2 = f.create("2");
         System.out.println(int2);
@@ -96,7 +96,8 @@ public class FCM {
         Method m = Dummy#fixed(String,boolean);  // succeeds = OK
 //        Method m = new Dummy("D")#fixed(String);  // fails = OK
 //        Method m = dummy#fixed(String);  // succeeds = OK
-//        Method m = this#process();  // succeeds = OK
+//        Method m = this#processLiterals();  // succeeds = OK
+//        Method m = #processLiterals();  // succeeds = OK
 //        Method m = super#clone();  // fails = OK
 //        Method m = dummys[0]#fixed(String);  // succeeds = OK
 //        Method m = dummys#hashCode();  // succeeds = OK
