@@ -60,6 +60,8 @@ public class FCM {
 //        ActionListener lnrLocal = local#handleStaticAction(ActionEvent);  // StaticAction
         System.out.println(lnrLocal);
         lnrLocal.actionPerformed(new ActionEvent("src", 0, "cmdLocal"));
+        
+//        registerAndCall(#handleLocalAction(ActionEvent));  // Main  // BUG
     }
 
     public void processConstructorReference() throws Exception {
@@ -90,20 +92,22 @@ public class FCM {
     }
 
     public void processLiterals() throws Exception {
-//        Method m = new Dummy("Hi")#fixed(String,boolean);  // fails = BUG
 //        Method m = Dummy#fixed(String);  // succeeds = OK
 //        Method m = Dummy#fixed(boolean);  // succeeds = OK
         Method m = Dummy#fixed(String,boolean);  // succeeds = OK
-//        Method m = new Dummy("D")#fixed(String);  // fails = OK
-//        Method m = dummy#fixed(String);  // succeeds = OK
-//        Method m = this#processLiterals();  // succeeds = OK
-//        Method m = #processLiterals();  // succeeds = OK
-//        Method m = super#clone();  // fails = OK
-//        Method m = dummys[0]#fixed(String);  // succeeds = OK
-//        Method m = dummys#hashCode();  // succeeds = OK
-//        Method m = Dummy.Inner.class#getDeclaredMethods();  // succeeds = OK
-//        Method m = FCM.DUMMY#fixed(String);  // succeeds = OK
 //        Method m = Dummy.Inner#inner(String);  // succeeds = OK
+        
+        // these fail as they are based on an instance, not a class
+//        Method m = new Dummy("Hi")#fixed(String,boolean);
+//        Method m = new Dummy("D")#fixed(String);
+//        Method m = dummy#fixed(String);
+//        Method m = this#processLiterals();
+//        Method m = #processLiterals();
+//        Method m = super#clone();
+//        Method m = dummys[0]#fixed(String);
+//        Method m = dummys#hashCode();
+//        Method m = Dummy.Inner.class#getDeclaredMethods();
+//        Method m = FCM.DUMMY#fixed(String);
         System.out.println(m.getName());
         m.invoke(dummy, "Hello", true);
         
@@ -173,6 +177,11 @@ public class FCM {
         } catch (NumberFormatException ex) {
             return Integer.valueOf(0);
         }
+    }
+
+    public void registerAndCall(ActionListener lnr) {
+        System.out.println(lnr);
+        lnr.actionPerformed(new ActionEvent("boo", 0, "hoo"));
     }
 
     @Override
