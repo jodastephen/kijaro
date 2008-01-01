@@ -1,17 +1,33 @@
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 public class FCM {
 
+    static FCM stat = new FCM("Static");
     static Dummy DUMMY = new Dummy("A");
     
     Dummy dummy = new Dummy("B");
     Dummy[] dummys = new Dummy[] {new Dummy("C")};
+    FCM inner = null;
+    private String name;
+
+    public FCM(String name) {
+        this.name = name;
+    }
 
     public static void main(String[] args) {
         try {
-            new FCM().process();
+            FCM fcm = new FCM("Main");
+            fcm.inner = new FCM("MainInner");
+            System.out.println(fcm);
+            System.out.println(fcm.inner);
+            fcm.process();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -21,6 +37,42 @@ public class FCM {
     public void process() throws Exception {
 //        Dummy dummy = dummy;
         System.out.println("Hello FCM");
+        
+        ActionListener lnr = FCM#handleStaticAction(ActionEvent);  // StaticAction
+        System.out.println(lnr);
+        lnr.actionPerformed(new ActionEvent("src", 0, "cmd"));
+        
+//        Class<?> cls1 = Class.forName("FCM$1");
+//        Constructor<?>[] cons1 = cls1.getDeclaredConstructors();
+//        System.out.println(Arrays.toString(cons1));
+        
+        FCM local = new FCM("Local");
+        local.inner = new FCM("LocalInner");
+//        ActionListener lnrLocal = FCM.this#handleLocalAction(ActionEvent);  // Main
+//        ActionListener lnrLocal = this#handleLocalAction(ActionEvent);  // Main
+//        ActionListener lnrLocal = #handleLocalAction(ActionEvent);  // NOT IMPLEMENTED
+//        ActionListener lnrLocal = FCM.this.inner#handleLocalAction(ActionEvent);  // MainInner
+//        ActionListener lnrLocal = this.inner#handleLocalAction(ActionEvent);  // MainInner
+//        ActionListener lnrLocal = inner#handleLocalAction(ActionEvent);  // MainInner
+        ActionListener lnrLocal = local#handleLocalAction(ActionEvent);  // Local
+//        ActionListener lnrLocal = local.inner#handleLocalAction(ActionEvent);  // LocalInner
+//        ActionListener lnrLocal = FCM.stat#handleLocalAction(ActionEvent);  // Static
+//        ActionListener lnrLocal = stat#handleLocalAction(ActionEvent);  // Static
+//        ActionListener lnrLocal = local#handleStaticAction(ActionEvent);  // StaticAction
+        System.out.println(lnrLocal);
+        lnrLocal.actionPerformed(new ActionEvent("src", 0, "cmdLocal"));
+        
+//        Class<?> cls2 = Class.forName("FCM$2");
+//        Constructor<?>[] cons2 = cls2.getDeclaredConstructors();
+//        System.out.println(Arrays.toString(cons2));
+//        
+//        ActionListener lnrA = new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                FCM.super.getClass();
+//            }
+//        };
+        
 //        Method m = new Dummy("Hi")#fixed(String,boolean);  // fails = BUG
 //        Method m = Dummy#fixed(String);  // succeeds = OK
 //        Method m = Dummy#fixed(boolean);  // succeeds = OK
@@ -89,4 +141,16 @@ public class FCM {
         }
     }
 
+    public static void handleStaticAction(ActionEvent ev) {
+        System.out.println("Event occurred: " + ev + " StaticAction");
+    }
+
+    public void handleLocalAction(ActionEvent ev) {
+        System.out.println("Event occurred locally: " + ev + " " + this);
+    }
+
+    @Override
+    public String toString() {
+        return "FCM:" + name;
+    }
 }
