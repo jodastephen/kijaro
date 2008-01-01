@@ -2046,6 +2046,8 @@ public class Lower extends TreeTranslator {
             tree.defs = tree.defs.prepend(otdef);
             enterSynthetic(tree.pos(), otdef.sym, currentClass.members());
         }
+//        System.out.println(tree);
+//        System.out.println(classdefs.get(currentClass.owner));
 
         proxies = proxies.leave();
         outerThisStack = prevOuterThisStack;
@@ -3078,10 +3080,10 @@ public class Lower extends TreeTranslator {
         System.out.println("Lower.visitFieldReference (Start)");
         
         // start process of changing the AST
-        make_at(tree.target.pos());
+        make_at(tree.pos());
         
         // find the method that resolves the Field
-        Symbol findMethod = lookupMethod(tree.target.pos(),
+        Symbol findMethod = lookupMethod(tree.pos(),
                 names.findField,
                 currentClass.type,
                 List.of(syms.classType, syms.stringType));
@@ -3093,7 +3095,6 @@ public class Lower extends TreeTranslator {
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
         JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        System.out.println("Done create:" + invokeFindNode);
         
         // return the updated AST
         result = invokeFindNode;
@@ -3106,10 +3107,10 @@ public class Lower extends TreeTranslator {
         System.out.println("Lower.visitConstructorReference (Start)");
         
         // start process of changing the AST
-        make_at(tree.target.pos());
+        make_at(tree.pos());
         
         // find the method that resolves the Constructor
-        Symbol findMethod = lookupMethod(tree.target.pos(),
+        Symbol findMethod = lookupMethod(tree.pos(),
                    names.findConstructor,
                    currentClass.type,
                    List.of(syms.classType, new ArrayType(syms.classType, syms.arrayClass)));
@@ -3126,7 +3127,6 @@ public class Lower extends TreeTranslator {
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
         JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        System.out.println("Done create:" + invokeFindNode);
         
         // return the updated AST
         result = invokeFindNode;
@@ -3136,13 +3136,21 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitMethodReference (Start)");
+        if (tree.convertToClassType == null) {
+            makeMethodLiteral(tree);
+        } else {
+            makeMethodReference(tree);
+        }
+    }
+
+    private void makeMethodLiteral(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitMethodReference.makeMethodLiteral (Start)");
         
         // start process of changing the AST
-        make_at(tree.target.pos());
+        make_at(tree.pos());
         
         // find the method that resolves the Method
-        Symbol findMethod = lookupMethod(tree.target.pos(),
+        Symbol findMethod = lookupMethod(tree.pos(),
                    names.findMethod,
                    currentClass.type,
                    List.of(syms.classType, syms.stringType, new ArrayType(syms.classType, syms.arrayClass)));
@@ -3160,12 +3168,107 @@ public class Lower extends TreeTranslator {
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
         JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        System.out.println("Done create:" + invokeFindNode);
         
         // return the updated AST
         result = invokeFindNode;
         
-        System.out.println("Lower.visitMethodReference (End)");
+        System.out.println("Lower.visitMethodReference.makeMethodLiteral (End)");
+    }
+
+    private void makeMethodReference(JCMethodReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitMethodReference.makeMethodReference (Start)");
+        
+        // start process of changing the AST
+        make_at(tree.pos());
+        
+        // store toString before it gets adjusted by code below
+        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;
+        
+        // create class
+        boolean staticRef = (tree.convertFromMethodSymbol.flags_field & STATIC) != 0;
+        ClassSymbol owner = currentClass;
+        long flags = FINAL | SYNTHETIC;
+        if (staticRef) {
+            flags |= (STATIC | NOOUTERTHIS);
+        }
+        ClassSymbol clsSym = makeEmptyClass(flags, owner);
+        clsSym.owner = currentMethodSym;  // need this to make it an anonymous inner class (owned by the method)
+        ClassType clsType = (ClassType) clsSym.type;
+        clsType.setEnclosingType(owner.type);  // need this to make it an inner class (owned by the class)
+        clsType.interfaces_field = List.<Type>of(tree.convertToClassType);
+        JCClassDecl clsDef = classDef(clsSym);
+        clsDef.implementing = List.<JCExpression>of(make.Type(tree.convertToClassType));
+        ListBuffer<JCTree> defs = new ListBuffer<JCTree>();
+        
+        // create constructor
+        MethodType conType = new MethodType(List.<Type>nil(), syms.voidType, List.<Type>nil(), clsSym);
+        MethodSymbol conSym = new MethodSymbol(PUBLIC, names.init, conType, clsSym);
+        
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.objectType;
+        zuper.sym = lookupConstructor(tree.pos(), syms.objectType, List.<Type>nil());
+        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(), zuper, List.<JCExpression>nil());
+        callSuper.setType(syms.voidType);
+        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+        
+        JCBlock conBody = make.Block(0L, List.<JCStatement>of(callSuperStatement));
+        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
+        clsDef.sym.members().enter(conSym);
+        defs.append(conDef);
+        
+        // make smi method
+        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsSym);
+        smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
+        JCBlock smiBody = make.Block(0L, List.<JCStatement>nil());
+        JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), smiBody);
+        
+        List<JCExpression> refParams = make.Idents(smiDef.params);
+        JCExpression callExp = null;
+        if (staticRef) {
+            callExp = make.QualIdent(tree.convertFromMethodSymbol);
+        } else {
+            callExp = make.Select(tree.target, tree.convertFromMethodSymbol);
+            // adjust the scope of this. and super. expressions so that we can reuse the
+            // inner class code
+            // (qualify with the class name to ClassName.this. and ClassName.super.)
+            class ScopeAdjustor extends TreeTranslator {
+                public void visitIdent(JCIdent tree) {
+                    if (tree.name == names._this || tree.name == names._super) {
+                        result = make.at(tree.pos()).Select(make.Ident(currentClass), tree.name);
+                    } else {
+                        result = tree;
+                    }
+                }
+            }
+            callExp = new ScopeAdjustor().translate(callExp);
+        }
+        JCMethodInvocation callRef = make.App(callExp, refParams);
+        callRef.setType(syms.voidType);
+        JCExpressionStatement callRefStatement = make.Exec(callRef);
+        smiBody.stats = smiBody.stats.append(callRefStatement);
+        
+        clsDef.sym.members().enter(smiSym);
+        defs.append(smiDef);
+        
+        // make toString method
+        MethodSymbol toStringSym = lookupMethod(tree.pos(), names.toString, syms.objectType, List.<Type>nil());
+        toStringSym = toStringSym.clone(clsSym);
+        JCStatement ret = make.Return(makeLit(syms.stringType, str));
+        JCBlock toStringBody = make.Block(0L, List.<JCStatement>of(ret));
+        JCMethodDecl toStringDef = make.MethodDef(toStringSym, toStringSym.asType(), toStringBody);
+        clsDef.sym.members().enter(toStringSym);
+        defs.append(toStringDef);
+        
+        // add constructor and method to class
+        clsDef.defs = defs.toList();
+        
+        // convert method reference to new instance of anonymous class
+        JCNewClass newClass = makeNewClass(clsType, List.<JCExpression>nil());
+        
+        // return the updated AST
+        result = translate(newClass);
+        
+        System.out.println("Lower.visitMethodReference.makeMethodReference (End)");
     }
 
     public void visitLetExpr(LetExpr tree) {
