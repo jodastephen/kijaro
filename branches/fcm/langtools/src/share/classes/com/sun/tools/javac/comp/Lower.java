@@ -3104,7 +3104,15 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitConstructorReference (Start)");
+        if (tree.convertToClassType == null) {
+            makeConstructorLiteral(tree);
+        } else {
+            makeConstructorReference(tree);
+        }
+    }
+
+    private void makeConstructorLiteral(JCConstructorReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitConstructorReference.makeConstructorLiteral (Start)");
         
         // start process of changing the AST
         make_at(tree.pos());
@@ -3131,7 +3139,51 @@ public class Lower extends TreeTranslator {
         // return the updated AST
         result = invokeFindNode;
         
-        System.out.println("Lower.visitConstructorReference (End)");
+        System.out.println("Lower.visitConstructorReference.makeConstructorLiteral (End)");
+    }
+
+    private void makeConstructorReference(JCConstructorReference tree) {  // FCM-MREF
+        System.out.println("Lower.visitConstructorReference.makeConstructorReference (Start)");
+        
+        // start process of changing the AST
+        make_at(tree.pos());
+        
+        // create class
+        long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.convertToClassType);
+        
+        // create constructor and methods
+        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;  // toString()
+        addFcmConstructor(tree, clsDef);
+        addFcmSmiConstructorReference(tree, clsDef);
+        addFcmToString(tree, clsDef, str);
+        
+        // convert constructor reference to new instance of anonymous class
+        JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>nil());
+        
+        // return the updated AST
+        result = translate(newClass);
+        
+        System.out.println("Lower.visitConstructorReference.makeConstructorReference (End)");
+    }
+
+    private void addFcmSmiConstructorReference(JCConstructorReference tree, JCClassDecl clsDef) {
+        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsDef.sym);
+        smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
+        JCBlock smiBody = make.Block(0L, List.<JCStatement>nil());
+        JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), smiBody);
+        
+        List<JCExpression> refParams = make.Idents(smiDef.params);
+        
+        Type createType = tree.convertToMethodSymbol.getReturnType();
+        JCNewClass callExp = make.NewClass(null, null, make.QualIdent(createType.tsym), refParams, null);
+        callExp.constructor = tree.convertFromMethodSymbol;
+        callExp.type = createType;
+        JCStatement callRefStatement = make.Call(callExp);
+        smiBody.stats = smiBody.stats.append(callRefStatement);
+        
+        clsDef.sym.members().enter(smiSym);
+        clsDef.defs = clsDef.defs.append(smiDef);
     }
 
     @Override
@@ -3181,55 +3233,42 @@ public class Lower extends TreeTranslator {
         // start process of changing the AST
         make_at(tree.pos());
         
-        // store toString before it gets adjusted by code below
-        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;
-        
         // create class
-        boolean staticRef = (tree.convertFromMethodSymbol.flags_field & STATIC) != 0;
-        ClassSymbol owner = currentClass;
         long flags = FINAL | SYNTHETIC;
-        if (staticRef) {
+        if (tree.isStaticReference()) {
             flags |= (STATIC | NOOUTERTHIS);
         }
-        ClassSymbol clsSym = makeEmptyClass(flags, owner);
-        clsSym.owner = currentMethodSym;  // need this to make it an anonymous inner class (owned by the method)
-        ClassType clsType = (ClassType) clsSym.type;
-        clsType.setEnclosingType(owner.type);  // need this to make it an inner class (owned by the class)
-        clsType.interfaces_field = List.<Type>of(tree.convertToClassType);
-        JCClassDecl clsDef = classDef(clsSym);
-        clsDef.implementing = List.<JCExpression>of(make.Type(tree.convertToClassType));
-        ListBuffer<JCTree> defs = new ListBuffer<JCTree>();
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.convertToClassType);
         
-        // create constructor
-        MethodType conType = new MethodType(List.<Type>nil(), syms.voidType, List.<Type>nil(), clsSym);
-        MethodSymbol conSym = new MethodSymbol(PUBLIC, names.init, conType, clsSym);
+        // create constructor and methods
+        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;  // toString()
+        addFcmConstructor(tree, clsDef);
+        addFcmSmiMethodReference(tree, clsDef);
+        addFcmToString(tree, clsDef, str);
         
-        JCIdent zuper = make.Ident(names._super);
-        zuper.type = syms.objectType;
-        zuper.sym = lookupConstructor(tree.pos(), syms.objectType, List.<Type>nil());
-        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(), zuper, List.<JCExpression>nil());
-        callSuper.setType(syms.voidType);
-        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+        // convert method reference to new instance of anonymous class
+        JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>nil());
         
-        JCBlock conBody = make.Block(0L, List.<JCStatement>of(callSuperStatement));
-        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
-        clsDef.sym.members().enter(conSym);
-        defs.append(conDef);
+        // return the updated AST
+        result = translate(newClass);
         
-        // make smi method
-        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsSym);
+        System.out.println("Lower.visitMethodReference.makeMethodReference (End)");
+    }
+
+    private void addFcmSmiMethodReference(JCMethodReference tree, JCClassDecl clsDef) {
+        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsDef.sym);
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
         JCBlock smiBody = make.Block(0L, List.<JCStatement>nil());
         JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), smiBody);
         
         List<JCExpression> refParams = make.Idents(smiDef.params);
         JCExpression callExp = null;
-        if (staticRef) {
+        if (tree.isStaticReference()) {
             callExp = make.QualIdent(tree.convertFromMethodSymbol);
         } else {
             callExp = make.Select(tree.target, tree.convertFromMethodSymbol);
             // adjust the scope of this. and super. expressions so that we can reuse the
-            // inner class code
+            // inner class code that provides access methods
             // (qualify with the class name to ClassName.this. and ClassName.super.)
             class ScopeAdjustor extends TreeTranslator {
                 public void visitIdent(JCIdent tree) {
@@ -3243,32 +3282,52 @@ public class Lower extends TreeTranslator {
             callExp = new ScopeAdjustor().translate(callExp);
         }
         JCMethodInvocation callRef = make.App(callExp, refParams);
-        callRef.setType(syms.voidType);
-        JCExpressionStatement callRefStatement = make.Exec(callRef);
+        callRef.setType(tree.convertToMethodSymbol.getReturnType());
+        JCStatement callRefStatement = make.Call(callRef);
         smiBody.stats = smiBody.stats.append(callRefStatement);
         
         clsDef.sym.members().enter(smiSym);
-        defs.append(smiDef);
+        clsDef.defs = clsDef.defs.append(smiDef);
+    }
+
+    private JCClassDecl makeFcmAnonymousInnerClass(long flags, Type ifaceType) {
+        ClassSymbol clsSym = makeEmptyClass(flags, currentClass);
+        clsSym.owner = currentMethodSym;  // need this to make it an anonymous inner class (owned by the method)
+        ClassType clsType = (ClassType) clsSym.type;
+        clsType.setEnclosingType(currentClass.type);  // need this to make it an inner class (owned by the class)
+        clsType.interfaces_field = List.<Type>of(ifaceType);
+        JCClassDecl clsDef = classDef(clsSym);
+        clsDef.implementing = List.<JCExpression>of(make.Type(ifaceType));
+        return clsDef;
+    }
+
+    private void addFcmConstructor(JCTree tree, JCClassDecl clsDef) {
+        MethodType conType = new MethodType(List.<Type>nil(), syms.voidType, List.<Type>nil(), clsDef.sym);
+        MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, clsDef.sym);
         
-        // make toString method
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.objectType;
+        zuper.sym = lookupConstructor(tree.pos(), syms.objectType, List.<Type>nil());
+        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(), zuper, List.<JCExpression>nil());
+        callSuper.setType(syms.voidType);
+        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+        
+        JCBlock conBody = make.Block(0L, List.<JCStatement>of(callSuperStatement));
+        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
+        clsDef.sym.members().enter(conSym);
+        clsDef.defs = clsDef.defs.append(conDef);
+    }
+
+    private void addFcmToString(JCTree tree, JCClassDecl clsDef, String str) {
         MethodSymbol toStringSym = lookupMethod(tree.pos(), names.toString, syms.objectType, List.<Type>nil());
-        toStringSym = toStringSym.clone(clsSym);
+        toStringSym = toStringSym.clone(clsDef.sym);
+        
         JCStatement ret = make.Return(makeLit(syms.stringType, str));
+        
         JCBlock toStringBody = make.Block(0L, List.<JCStatement>of(ret));
         JCMethodDecl toStringDef = make.MethodDef(toStringSym, toStringSym.asType(), toStringBody);
         clsDef.sym.members().enter(toStringSym);
-        defs.append(toStringDef);
-        
-        // add constructor and method to class
-        clsDef.defs = defs.toList();
-        
-        // convert method reference to new instance of anonymous class
-        JCNewClass newClass = makeNewClass(clsType, List.<JCExpression>nil());
-        
-        // return the updated AST
-        result = translate(newClass);
-        
-        System.out.println("Lower.visitMethodReference.makeMethodReference (End)");
+        clsDef.defs = clsDef.defs.append(toStringDef);
     }
 
     public void visitLetExpr(LetExpr tree) {
