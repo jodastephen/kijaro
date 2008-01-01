@@ -47,6 +47,7 @@ import com.sun.source.tree.*;
 import com.sun.source.tree.Tree.Kind;
 
 import static com.sun.tools.javac.code.BoundKind.*;
+import static com.sun.tools.javac.code.Flags.STATIC;
 
 /**
  * Root class for abstract syntax tree nodes. It provides definitions
@@ -1717,6 +1718,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         // FCM-MREF
         public JCExpression target;
         public List<JCExpression> types;
+        public ClassType convertToClassType;
+        public MethodSymbol convertToMethodSymbol;
+        public MethodSymbol convertFromMethodSymbol;
         protected JCConstructorReference(
                 JCExpression target,
                 List<JCExpression> types) {
@@ -1770,6 +1774,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public Kind getKind() { return Kind.METHOD_REFERENCE; }
         public JCExpression getTarget() { return target; }
         public Name getName() { return name; }
+        public boolean isStaticReference() {
+            return (convertFromMethodSymbol.flags_field & STATIC) != 0;
+        }
         public List<JCExpression> getTypes() {
             return types;
         }
