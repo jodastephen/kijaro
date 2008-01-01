@@ -2442,6 +2442,7 @@ public class Attr extends JCTree.Visitor {
         Symbol sym = rs.resolveInternalField(tree.pos(), env, site, tree.name);
         
         // assign and check types
+        site = attribType(siteTarget, env);
         result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
         
         System.out.println("Attr.visitFieldReference (End)");
@@ -2483,6 +2484,7 @@ public class Attr extends JCTree.Visitor {
             result = tree.type;
         } else {
             // check for java.util.reflect.Constructor
+            site = attribType(siteTarget, env);
             ClassType typedConstructor = new ClassType(Type.noType, List.of(site), syms.reflectConstructorType.asElement());
             result = check(tree, typedConstructor, VAL, pkind, pt);
         }
@@ -2524,6 +2526,7 @@ public class Attr extends JCTree.Visitor {
             result = tree.type;
         } else {
             // check for java.util.reflect.Method
+            site = attribType(siteTarget, env);
             result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
         }
         
