@@ -2439,7 +2439,6 @@ public class Attr extends JCTree.Visitor {
         
         // validate that field exists and is accessible
         Symbol sym = rs.resolveInternalField(tree.pos(), env, site, tree.name);
-        System.out.println("Matched:" + sym);
         
         // assign and check types
         result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
@@ -2459,7 +2458,6 @@ public class Attr extends JCTree.Visitor {
         
         // validate that constructor exists and is accessible
         Symbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, paramTypes, null);
-        System.out.println("Matched:" + sym);
         
         // assign and check types
         ClassType typedConstructor = new ClassType(Type.noType, List.of(site), syms.reflectConstructorType.asElement());
@@ -2480,15 +2478,15 @@ public class Attr extends JCTree.Visitor {
         
         // validate that method exists and is accessible
         MethodSymbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, paramTypes, null);
-        System.out.println("Matched:" + sym);
         
         // assign and check types
         MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
         if (smiMethod != null) {
             if (types.isSameType(smiMethod.asType(), sym.asType())) {
                 // matching smi
-                tree.conversionClassType = (ClassType) pt;
-                tree.conversionMethodType = (MethodType) smiMethod.asType();
+                tree.convertToClassType = (ClassType) pt;
+                tree.convertToMethodSymbol = smiMethod;
+                tree.convertFromMethodSymbol = sym;
                 result = check(tree, pt, VAL, pkind, pt);
             } else {
                 // smi, but method type does not match - provide separate error message

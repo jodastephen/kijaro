@@ -1753,8 +1753,9 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public JCExpression target;
         public Name name;
         public List<JCExpression> types;
-        public ClassType conversionClassType;
-        public MethodType conversionMethodType;
+        public ClassType convertToClassType;
+        public MethodSymbol convertToMethodSymbol;
+        public MethodSymbol convertFromMethodSymbol;
         protected JCMethodReference(
                 JCExpression target,
                 Name identifier,
