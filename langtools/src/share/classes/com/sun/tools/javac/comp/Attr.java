@@ -2435,7 +2435,8 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Attr.visitFieldReference (Start)");
         
         // resolve the target
-        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
+        Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
         
         // validate that field exists and is accessible
         Symbol sym = rs.resolveInternalField(tree.pos(), env, site, tree.name);
@@ -2451,7 +2452,8 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Attr.visitConstructorReference (Start)");
         
         // resolve the target
-        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
+        Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
         
         // resolve the parameter types
         List<Type> paramTypes = attribParamTypes(tree.types, env);
@@ -2493,7 +2495,8 @@ public class Attr extends JCTree.Visitor {
         System.out.println("Attr.visitMethodReference (Start)");
         
         // resolve the target
-        Type site = attribTree(tree.target, env, TYP | VAR, Infer.anyPoly);
+        JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
+        Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
         
         // resolve the parameter types
         List<Type> paramTypes = attribParamTypes(tree.types, env);

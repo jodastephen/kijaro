@@ -3090,7 +3090,8 @@ public class Lower extends TreeTranslator {
         
         // build the arguments into a list
         JCExpression fieldName = makeLit(syms.stringType, tree.name.toString());
-        List<JCExpression> args = List.of(classOf(tree.target), fieldName);
+        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
+        List<JCExpression> args = List.of(classOf(siteTarget), fieldName);
         
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
@@ -3130,7 +3131,8 @@ public class Lower extends TreeTranslator {
         }
         JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
         typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
-        List<JCExpression> args = List.of(classOf(tree.target),  typesArray);
+        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
+        List<JCExpression> args = List.of(classOf(siteTarget),  typesArray);
         
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
@@ -3215,7 +3217,8 @@ public class Lower extends TreeTranslator {
         JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
         typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
         JCExpression methodName = makeLit(syms.stringType, tree.name.toString());
-        List<JCExpression> args = List.of(classOf(tree.target), methodName, typesArray);
+        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
+        List<JCExpression> args = List.of(classOf(siteTarget), methodName, typesArray);
         
         // change the AST
         JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
@@ -3266,7 +3269,8 @@ public class Lower extends TreeTranslator {
         if (tree.isStaticReference()) {
             callExp = make.QualIdent(tree.convertFromMethodSymbol);
         } else {
-            callExp = make.Select(tree.target, tree.convertFromMethodSymbol);
+            JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
+            callExp = make.Select(siteTarget, tree.convertFromMethodSymbol);
             // adjust the scope of this. and super. expressions so that we can reuse the
             // inner class code that provides access methods
             // (qualify with the class name to ClassName.this. and ClassName.super.)

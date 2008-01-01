@@ -1095,51 +1095,27 @@ public class Parser {
             if (typeArgs != null) illegal();
             t = typeArgumentsOpt(t);
             break;
-//        case HASH:  // FCM-MTYPE
-////            System.out.println("Processing #(methodType)");
-//            if ((mode & TYPE) == 0) {
-//                illegal();
-//            }
-//            // TODO: This parsing is all wrong - it needs a new AST element
-//            int mtStartPos = pos;
-//            S.nextToken();
-//            accept(LPAREN);
-//            String str = "#(";
-//            if (S.token() == VOID) {
-//                str += "void";
-//                S.nextToken();
-//            } else {
-//                JCExpression type = type();
-//                str += type.toString();
-//            }
-//            accept(LPAREN);
-//            str += "(";
-//            if (S.token() != RPAREN) {
-//                if (S.token() == VOID) {
-//                    str += "void";
-//                    S.nextToken();
-//                } else {
-//                    JCExpression type = type();
-//                    str += type.toString();
-//                }
-//                while (S.token() == COMMA) {
-//                    str += ",";
-//                    S.nextToken();
-//                    if (S.token() == VOID) {
-//                        str += "void";
-//                        S.nextToken();
-//                    } else {
-//                        JCExpression type = type();
-//                        str += type.toString();
-//                    }
-//                }
-//            }
-//            accept(RPAREN);
-//            accept(RPAREN);
-//            str += "))";
-////            System.out.println("Processing #(methodType) - " + str);
-//            t = toP(F.at(mtStartPos).Ident(names.fromString(str)));
-//            break;
+        case HASH:  // FCM-MREF
+            if (typeArgs != null) {
+                return illegal();
+            }
+            mode = EXPR;
+            S.nextToken();
+            if (S.token() == LPAREN) {
+                List<JCExpression> types = types();
+                t = toP(F.at(pos).ConstructorReference(null, types));
+            } else if (S.token() == IDENTIFIER) {
+                Name name = ident();  // calls S.nextToken()
+                if (S.token() != LPAREN) {
+                    t = toP(F.at(pos).FieldReference(null, name));
+                } else {
+                    List<JCExpression> types = types();
+                    t = toP(F.at(pos).MethodReference(null, name, types));
+                }
+            } else {
+                return illegal();
+            }
+            break;
         case BYTE: case SHORT: case CHAR: case INT: case LONG: case FLOAT:
         case DOUBLE: case BOOLEAN:
             if (typeArgs != null) illegal();
