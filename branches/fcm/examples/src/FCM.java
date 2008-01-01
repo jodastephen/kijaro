@@ -27,17 +27,16 @@ public class FCM {
             fcm.inner = new FCM("MainInner");
             System.out.println(fcm);
             System.out.println(fcm.inner);
-            fcm.process();
+            fcm.processMethodReference();
+            fcm.processConstructorReference();
+            fcm.processLiterals();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         
     }
 
-    public void process() throws Exception {
-//        Dummy dummy = dummy;
-        System.out.println("Hello FCM");
-        
+    public void processMethodReference() throws Exception {
         ActionListener lnr = FCM#handleStaticAction(ActionEvent);  // StaticAction
         System.out.println(lnr);
         lnr.actionPerformed(new ActionEvent("src", 0, "cmd"));
@@ -61,18 +60,36 @@ public class FCM {
 //        ActionListener lnrLocal = local#handleStaticAction(ActionEvent);  // StaticAction
         System.out.println(lnrLocal);
         lnrLocal.actionPerformed(new ActionEvent("src", 0, "cmdLocal"));
+    }
+
+    public void processConstructorReference() throws Exception {
+//        StringIntegerFactory ft = this#(String);
+//        System.out.println(ft);
+//        FCM instance = ft.create("2");
+//        System.out.println(instance);
         
-//        Class<?> cls2 = Class.forName("FCM$2");
-//        Constructor<?>[] cons2 = cls2.getDeclaredConstructors();
-//        System.out.println(Arrays.toString(cons2));
-//        
-//        ActionListener lnrA = new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                FCM.super.getClass();
-//            }
-//        };
+        StringIntegerFactory f = this#convertStringToInteger(String);
+        System.out.println(f);
+        Integer int2 = f.create("2");
+        System.out.println(int2);
         
+        Integer intX = f.create("X");
+        System.out.println(intX);
+        
+        StringIntegerFactory factory = Integer#(String);
+        System.out.println(factory);
+        Integer i1 = factory.create("1");
+        System.out.println(i1);
+        
+        try {
+            factory.create("x");
+            throw new AssertionError();
+        } catch (NumberFormatException ex) {
+            System.out.println("Expected NumberFormatException");
+        }
+    }
+
+    public void processLiterals() throws Exception {
 //        Method m = new Dummy("Hi")#fixed(String,boolean);  // fails = BUG
 //        Method m = Dummy#fixed(String);  // succeeds = OK
 //        Method m = Dummy#fixed(boolean);  // succeeds = OK
@@ -147,6 +164,14 @@ public class FCM {
 
     public void handleLocalAction(ActionEvent ev) {
         System.out.println("Event occurred locally: " + ev + " " + this);
+    }
+
+    public Integer convertStringToInteger(String str) {
+        try {
+            return Integer.valueOf(str);
+        } catch (NumberFormatException ex) {
+            return Integer.valueOf(0);
+        }
     }
 
     @Override
