@@ -1750,7 +1750,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
-     * A member reference.
+     * A method reference.
      */
     public static class JCMethodReference extends JCExpression implements MethodReferenceTree {
         // FCM-MREF
