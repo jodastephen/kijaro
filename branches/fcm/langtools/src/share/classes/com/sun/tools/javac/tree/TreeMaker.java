@@ -399,19 +399,19 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCFieldReference FieldReference(JCExpression target, Name name) {
+    public JCFieldReference FieldReference(JCExpression target, Name name) {  // FCM-MREF
         JCFieldReference tree = new JCFieldReference(target, name);
         tree.pos = pos;
         return tree;
     }
 
-    public JCConstructorReference ConstructorReference(JCExpression target, List<JCExpression> types) {
+    public JCConstructorReference ConstructorReference(JCExpression target, List<JCExpression> types) {  // FCM-MREF
         JCConstructorReference tree = new JCConstructorReference(target, types);
         tree.pos = pos;
         return tree;
     }
 
-    public JCMethodReference MethodReference(JCExpression target, Name name, List<JCExpression> types) {
+    public JCMethodReference MethodReference(JCExpression target, Name name, List<JCExpression> types) {  // FCM-MREF
         JCMethodReference tree = new JCMethodReference(target, name, types);
         tree.pos = pos;
         return tree;
