@@ -18,10 +18,10 @@ There are a variety of classes representing types, including:
 <li>Type - The compiler level view of a type, with many subclasses:</li>
 <li>BottomType - Represents null.</li>
 <li>ClassType - Represents classes and interfaces, together with any type variables.
-The type variables will be a ClassType if known, such as 'Set<String>', or a TypeVar if unknown, such as 'Set<T>'.</li>
+The type variables will be a ClassType if known, such as 'Set&lt;String&gt;', or a TypeVar if unknown, such as 'Set&lt;T&gt;'.</li>
 <li>ArrayType - Represents arrays, such as 'String[]'.</li>
 <li>MethodType - Represents a method, constructor or initializer.</li>
-<li>ForAllType - Represents a method called with explicit type variables, such as 'ListUtils.<String>create()'.</li>
+<li>ForAllType - Represents a method called with explicit type variables, such as 'ListUtils.&lt;String&gt;create()'.</li>
 <li>PackageType - Represents packages.</li>
 <li>WildcardType - Represents the type variable '?', which may also have bounds, such as '? extends Number'.</li>
 <li>TypeVar - Represents a type variable 'T' or 'T extends Number'.</li>
