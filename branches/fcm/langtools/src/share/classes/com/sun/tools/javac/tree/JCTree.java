@@ -224,19 +224,23 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
 
     /** Selections, of type FieldReference.
      */
-    public static final int FIELDREFERENCE = SELECT + 1;
+    public static final int FIELDREFERENCE = SELECT + 1;  // FCM-MREF
 
     /** Selections, of type ConstructorReference.
      */
-    public static final int CONSTRUCTORREFERENCE = FIELDREFERENCE + 1;
+    public static final int CONSTRUCTORREFERENCE = FIELDREFERENCE + 1;  // FCM-MREF
 
     /** Selections, of type MethodReference.
      */
-    public static final int METHODREFERENCE = CONSTRUCTORREFERENCE + 1;
+    public static final int METHODREFERENCE = CONSTRUCTORREFERENCE + 1;  // FCM-MREF
+
+    /** Selections, of type InnerMethod.
+     */
+    public static final int INNERMETHOD = METHODREFERENCE + 1;  // FCM-IM
 
     /** Simple identifiers, of type Ident.
      */
-    public static final int IDENT = METHODREFERENCE + 1;
+    public static final int IDENT = INNERMETHOD + 1;
 
     /** Literals, of type Literal.
      */
@@ -1795,6 +1799,42 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
     }
 
     /**
+     * An inner method.
+     */
+    public static class JCInnerMethod extends JCExpression implements InnerMethodTree {
+        // FCM-IM
+        public List<JCVariableDecl> params;
+        public JCBlock body;
+        public ClassType convertToClassType;
+        public MethodSymbol convertToMethodSymbol;
+        public JCNewClass def;
+        protected JCInnerMethod(
+                List<JCVariableDecl> params,
+                JCBlock body) {
+            this.params = params;
+            this.body = body;
+        }
+        @Override
+        public void accept(Visitor v) { v.visitInnerMethod(this); }
+
+        public Kind getKind() { return Kind.INNER_METHOD; }
+        public List<? extends VariableTree> getParameters() { return params; }
+        public BlockTree getBody() { return body; }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitInnerMethod(this, d);
+        }
+        @Override
+        public JCInnerMethod setType(Type type) {
+            super.setType(type);
+            return this;
+        }
+        public int getTag() {
+            return INNERMETHOD;
+        }
+    }
+
+    /**
      * An identifier
      * @param idname the name
      * @param sym the symbol
@@ -2244,6 +2284,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         JCFieldReference FieldReference(JCExpression target, Name name);  // FCM-MREF
         JCConstructorReference ConstructorReference(JCExpression target, List<JCExpression> types);  // FCM-MREF
         JCMethodReference MethodReference(JCExpression target, Name name, List<JCExpression> types);  // FCM-MREF
+        JCInnerMethod InnerMethod(List<JCVariableDecl> params, JCBlock body);  // FCM-IM
         JCIdent Ident(Name idname);
         JCLiteral Literal(int tag, Object value);
         JCPrimitiveTypeTree TypeIdent(int typetag);
@@ -2301,6 +2342,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitFieldReference(JCFieldReference that) { visitTree(that); }  // FCM-MREF
         public void visitConstructorReference(JCConstructorReference that) { visitTree(that); }  // FCM-MREF
         public void visitMethodReference(JCMethodReference that) { visitTree(that); }  // FCM-MREF
+        public void visitInnerMethod(JCInnerMethod that)     { visitTree(that); }  // FCM-IM
         public void visitIdent(JCIdent that)                 { visitTree(that); }
         public void visitLiteral(JCLiteral that)             { visitTree(that); }
         public void visitTypeIdent(JCPrimitiveTypeTree that) { visitTree(that); }

@@ -223,6 +223,11 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
         return defaultAction(node, p);
     }
 
+    @Override
+    public R visitInnerMethod(InnerMethodTree node, P p) {  // FCM-IM
+        return defaultAction(node, p);
+    }
+
     public R visitIdentifier(IdentifierTree node, P p) {
         return defaultAction(node, p);
     }

@@ -359,6 +359,14 @@ public class TreeTranslator extends JCTree.Visitor {
         result = tree;
     }
 
+    @Override
+    public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
+        tree.params = translateVarDefs(tree.params);
+        tree.body = translate(tree.body);
+        tree.def = translate(tree.def);
+        result = tree;
+    }
+
     public void visitIdent(JCIdent tree) {
         result = tree;
     }

@@ -186,6 +186,11 @@ public interface Tree {
         METHOD_REFERENCE(MethodReferenceTree.class),  // FCM-MREF
 
         /**
+         * Used for instances of {@link InnerMethodTree}.
+         */
+        INNER_METHOD(InnerMethodTree.class),  // FCM-IM
+
+        /**
          * Used for instances of {@link ModifiersTree}.
          */
         MODIFIERS(ModifiersTree.class),

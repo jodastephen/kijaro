@@ -313,6 +313,17 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         return M.at(t.pos).MethodReference(target, t.name, types);
     }
 
+    @Override
+    public JCTree visitInnerMethod(InnerMethodTree node, P p) {  // FCM-IM
+        JCInnerMethod t = (JCInnerMethod) node;
+        List<JCVariableDecl> params = copy(t.params, p);
+        JCBlock body = copy(t.body, p);
+        JCNewClass def = copy(t.def, p);
+        JCInnerMethod im = M.at(t.pos).InnerMethod(params, body);
+        im.def = def;
+        return im;
+    }
+
     public JCTree visitEmptyStatement(EmptyStatementTree node, P p) {
         JCSkip t = (JCSkip) node;
         return M.at(t.pos).Skip();

@@ -351,6 +351,13 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return r;
     }
 
+    @Override
+    public R visitInnerMethod(InnerMethodTree node, P p) {  // FCM-IM
+        R r = scan(node.getParameters(), p);
+        r = scanAndReduce(node.getBody(), p, r);
+        return r;
+    }
+
     public R visitIdentifier(IdentifierTree node, P p) {
         return null;
     }

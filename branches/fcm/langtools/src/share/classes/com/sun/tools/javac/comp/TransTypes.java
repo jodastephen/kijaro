@@ -738,6 +738,14 @@ public class TransTypes extends TreeTranslator {
         result = tree;
     }
 
+    @Override
+    public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
+        tree.params = translateVarDefs(tree.params);
+        tree.body = translate(tree.body, tree.convertToMethodSymbol.erasure(types).getReturnType());
+        tree.def = translate(tree.def);
+        result = tree;
+    }
+
     public void visitTypeArray(JCArrayTypeTree tree) {
         tree.elemtype = translate(tree.elemtype, null);
         tree.type = erasure(tree.type);
