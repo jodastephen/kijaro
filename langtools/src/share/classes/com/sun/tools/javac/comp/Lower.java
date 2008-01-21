@@ -3334,6 +3334,16 @@ public class Lower extends TreeTranslator {
         clsDef.defs = clsDef.defs.append(toStringDef);
     }
 
+    @Override
+    public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
+        System.out.println("Lower.visitInnerMethod (Start)");
+        
+        // replace node by NewClass created in Attr
+        result = translate(tree.def);
+        
+        System.out.println("Lower.visitInnerMethod (End)");
+    }
+
     public void visitLetExpr(LetExpr tree) {
         tree.defs = translateVarDefs(tree.defs);
         tree.expr = translate(tree.expr, tree.type);

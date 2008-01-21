@@ -933,6 +933,7 @@ public class Parser {
                     case NEW: case IDENTIFIER: case ASSERT: case ENUM:
                     case BYTE: case SHORT: case CHAR: case INT:
                     case LONG: case FLOAT: case DOUBLE: case BOOLEAN: case VOID:
+                    case HASH:
                         JCExpression t1 = term3();
                         return F.at(pos).TypeCast(t, t1);
                     }
@@ -1047,41 +1048,24 @@ public class Parser {
                     // type-or-variable # identifier
                     if ((mode & EXPR) != 0) {
                         mode = EXPR;  // whole of the member reference is an expression
-//                        System.out.println("Processing # (A)");
-//                        System.out.println(" Mode " + mode);
-//                        System.out.println(" Token " + S.token());
-//                        System.out.println(" TName " + S.name());
-                        
                         S.nextToken();
-//                        System.out.println(" Token " + S.token());
-//                        System.out.println(" TName " + S.name());
                         if (typeArgs != null) {
                             return illegal();
                         }
                         JCExpression primary = t;
-//                        System.out.println(" Primary " + primary);
                         if (S.token() == LPAREN) {
-//                            System.out.println(" Constructor reference");
+                            // Identifier#(TypesOpt);
                             List<JCExpression> types = types();
-//                            System.out.println(" Types " + types);
                             t = toP(F.at(pos).ConstructorReference(primary, types));
-//                            System.out.println(" Token " + S.token());
-                            
                         } else if (S.token() == IDENTIFIER) {
                             Name name = ident();  // calls S.nextToken()
-//                            System.out.println(" Name " + name);
-                            
-//                            System.out.println(" Token " + S.token());
                             if (S.token() != LPAREN) {
-//                                System.out.println(" Field reference");
+                                // Identifier#field;
                                 t = toP(F.at(pos).FieldReference(primary, name));
-//                                System.out.println(" Token " + S.token());
                             } else {
-//                                System.out.println(" Method reference");
+                                // Identifier#method(TypesOpt);
                                 List<JCExpression> types = types();
-//                                System.out.println(" Types " + types);
                                 t = toP(F.at(pos).MethodReference(primary, name, types));
-//                                System.out.println(" Token " + S.token());
                             }
                         } else {
                             return illegal();
@@ -1095,20 +1079,33 @@ public class Parser {
             if (typeArgs != null) illegal();
             t = typeArgumentsOpt(t);
             break;
-        case HASH:  // FCM-MREF
+        case HASH:  // FCM-MREF, FCM-MI
             if (typeArgs != null) {
                 return illegal();
             }
             mode = EXPR;
             S.nextToken();
             if (S.token() == LPAREN) {
-                List<JCExpression> types = types();
-                t = toP(F.at(pos).ConstructorReference(null, types));
+                List<JCVariableDecl> params = formalParameters();
+                // System.out.println("Params: " + params);
+                if (S.token() == LBRACE) {
+                    // #() { ... };  - Inner method
+                    JCBlock body = block();
+                    t = toP(F.at(pos).InnerMethod(params, body));
+                } else {
+                    // #(TypesOpt);  - Constructor reference
+                    // TODO: Convert JCVariableDecl to JCExpression (types), or error
+//                    List<JCExpression> types = types();
+                    List<JCExpression> types = List.<JCExpression>nil();
+                    t = toP(F.at(pos).ConstructorReference(null, types));
+                }
             } else if (S.token() == IDENTIFIER) {
                 Name name = ident();  // calls S.nextToken()
                 if (S.token() != LPAREN) {
+                    // #field;
                     t = toP(F.at(pos).FieldReference(null, name));
                 } else {
+                    // #method(TypesOpt);
                     List<JCExpression> types = types();
                     t = toP(F.at(pos).MethodReference(null, name, types));
                 }
@@ -1183,40 +1180,25 @@ public class Parser {
                     typeArgs = null;
                 }
             } else if (S.token() == HASH) {  // FCM-MREF
-//                System.out.println("Processing # (B)");
-//                System.out.println(" Token " + S.token());
-//                System.out.println(" TName " + S.name());
-                
                 S.nextToken();
-//                System.out.println(" Token " + S.token());
-//                System.out.println(" TName " + S.name());
                 if (typeArgs != null) {
                     return illegal();
                 }
                 JCExpression primary = t;
-//                System.out.println(" Primary " + primary);
                 if (S.token() == LPAREN) {
-//                    System.out.println(" Constructor reference");
+                    // ...#(TypesOpt);
                     List<JCExpression> types = types();
-//                    System.out.println(" Types " + types);
                     t = toP(F.at(pos).ConstructorReference(primary, types));
-//                    System.out.println(" Token " + S.token());
                     
                 } else if (S.token() == IDENTIFIER) {
                     Name name = ident();  // calls S.nextToken()
-//                    System.out.println(" Name " + name);
-                    
-//                    System.out.println(" Token " + S.token());
                     if (S.token() != LPAREN) {
-//                        System.out.println(" Field reference");
+                        // ...#field;
                         t = toP(F.at(pos).FieldReference(primary, name));
-//                        System.out.println(" Token " + S.token());
                     } else {
-//                        System.out.println(" Method reference");
+                        // ...#method(TypesOpt);
                         List<JCExpression> types = types();
-//                        System.out.println(" Types " + types);
                         t = toP(F.at(pos).MethodReference(primary, name, types));
-//                        System.out.println(" Token " + S.token());
                     }
                 } else {
                     return illegal();
@@ -2605,12 +2587,17 @@ public class Parser {
             if (S.token() == CLASS ||
                 S.token() == INTERFACE ||
                 allowEnums && S.token() == ENUM) {
+                // inner class/inner interface/inner enum
                 return List.<JCTree>of(classOrInterfaceOrEnumDeclaration(mods, dc));
+                
             } else if (S.token() == LBRACE && !isInterface &&
                        (mods.flags & Flags.StandardFlags & ~Flags.STATIC) == 0 &&
                        mods.annotations.isEmpty()) {
+                // static or instance initialiser (static in modifiers)
                 return List.<JCTree>of(block(pos, mods.flags));
+                
             } else {
+                // method or variable declaration
                 pos = S.pos();
                 List<JCTypeParameter> typarams = typeParametersOpt();
                 // Hack alert:  if there are type arguments but no Modifiers, the start
@@ -2622,6 +2609,7 @@ public class Parser {
                 Token token = S.token();
                 Name name = S.name();
                 pos = S.pos();
+                // method return type, or variable type
                 JCExpression type;
                 boolean isVoid = S.token() == VOID;
                 if (isVoid) {
@@ -2630,7 +2618,9 @@ public class Parser {
                 } else {
                     type = type();
                 }
+                
                 if (S.token() == LPAREN && !isInterface && type.getTag() == JCTree.IDENT) {
+                    // constructor
                     if (isInterface || name != className)
                         log.error(pos, "invalid.meth.decl.ret.type.req");
                     return List.of(methodDeclaratorRest(
@@ -2640,10 +2630,12 @@ public class Parser {
                     pos = S.pos();
                     name = ident();
                     if (S.token() == LPAREN) {
+                        // method
                         return List.of(methodDeclaratorRest(
                             pos, mods, type, name, typarams,
                             isInterface, isVoid, dc));
                     } else if (!isVoid && typarams.isEmpty()) {
+                        // variable
                         List<JCTree> defs =
                             variableDeclaratorsRest(pos, mods, type, name, isInterface, dc,
                                                     new ListBuffer<JCTree>()).toList();
@@ -2651,6 +2643,7 @@ public class Parser {
                         accept(SEMI);
                         return defs;
                     } else {
+                        // error
                         pos = S.pos();
                         List<JCTree> err = isVoid
                             ? List.<JCTree>of(toP(F.at(pos).MethodDef(mods, name, type, typarams,
@@ -2681,20 +2674,29 @@ public class Parser {
                               List<JCTypeParameter> typarams,
                               boolean isInterface, boolean isVoid,
                               String dc) {
+        // method parameters
         List<JCVariableDecl> params = formalParameters();
+        
+        // can declare method as public String name()[]  !!!
         if (!isVoid) type = bracketsOpt(type);
+        
+        // throws clause
         List<JCExpression> thrown = List.nil();
         if (S.token() == THROWS) {
             S.nextToken();
             thrown = qualidentList();
         }
+        
+        // main body
         JCBlock body = null;
         JCExpression defaultValue;
         if (S.token() == LBRACE) {
+            // normal method block
             body = block();
             defaultValue = null;
         } else {
             if (S.token() == DEFAULT) {
+                // default value in an annotation
                 accept(DEFAULT);
                 defaultValue = annotationValue();
             } else {
@@ -2825,6 +2827,7 @@ public class Parser {
         case JCTree.FIELDREFERENCE:  // FCM-MREF
         case JCTree.CONSTRUCTORREFERENCE:  // FCM-MREF
         case JCTree.METHODREFERENCE:  // FCM-MREF
+        case JCTree.INNERMETHOD:  // FCM-IM
         case JCTree.ERRONEOUS:
             return t;
         default:

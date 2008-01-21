@@ -417,6 +417,12 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
+    public JCInnerMethod InnerMethod(List<JCVariableDecl> params, JCBlock body) {  // FCM-IM
+        JCInnerMethod tree = new JCInnerMethod(params, body);
+        tree.pos = pos;
+        return tree;
+    }
+
     public JCIdent Ident(Name name) {
         JCIdent tree = new JCIdent(name, null);
         tree.pos = pos;

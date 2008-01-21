@@ -439,7 +439,7 @@ public class Pretty extends JCTree.Visitor {
     public void visitMethodDef(JCMethodDecl tree) {
         try {
             // when producing source output, omit anonymous constructors
-            if (tree.name == tree.name.table.init &&
+            if (tree.name == tree.name.table.init &&  // FCM-IM
                     enclClassName == null &&
                     sourceOutput) return;
             println(); align();
@@ -1057,6 +1057,18 @@ public class Pretty extends JCTree.Visitor {
             print("(");
             printExprs(tree.types);
             print(")");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
+        try {
+            print("#(");
+            printExprs(tree.params);
+            print(") ");
+            printStat(tree.body);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

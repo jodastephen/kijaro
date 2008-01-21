@@ -91,6 +91,7 @@ public interface TreeVisitor<R,P> {
     R visitFieldReference(FieldReferenceTree node, P p);  // FCM-MREF
     R visitConstructorReference(ConstructorReferenceTree node, P p);  // FCM-MREF
     R visitMethodReference(MethodReferenceTree node, P p);  // FCM-MREF
+    R visitInnerMethod(InnerMethodTree node, P p);  // FCM-IM
     R visitEmptyStatement(EmptyStatementTree node, P p);
     R visitSwitch(SwitchTree node, P p);
     R visitSynchronized(SynchronizedTree node, P p);
