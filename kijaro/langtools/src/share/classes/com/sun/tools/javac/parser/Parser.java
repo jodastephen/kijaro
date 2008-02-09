@@ -121,6 +121,10 @@ public class Parser {
     /** The name table. */
     private Name.Table names;
 
+	/** The counter for auto generating unique parameter identifiers */
+	private int autoIdentCounter = 0;
+
+
     /** Construct a parser from a given scanner, tree factory and log.
      */
     protected Parser(Factory fac,
@@ -467,6 +471,33 @@ public class Parser {
             return names.error;
         }
 }
+
+
+    /**
+     * OptionaIdent = [IDENTIFIER]
+     */ 
+    Name optionalIdent()
+    {
+        if(S.token() == IDENTIFIER)
+        {
+            Name name = S.name();
+            S.nextToken();
+            return name;
+        }
+        else if(S.token() == RPAREN || S.token() == COMMA)
+        {
+            // The JLS guarenties no existing identifier would clash with ?...
+            String autoIdent = "?" + String.valueOf(autoIdentCounter++);
+            Name name = names.fromChars(autoIdent.toCharArray(), 0, autoIdent.length());
+            return name;
+        }
+        else
+        {
+            accept(IDENTIFIER);
+            return names.error;
+        }
+    }
+
 
     /**
      * Qualident = Ident { DOT Ident }
@@ -2118,7 +2149,7 @@ public class Parser {
      */
     JCVariableDecl variableDeclaratorId(JCModifiers mods, JCExpression type) {
         int pos = S.pos();
-        Name name = ident();
+        Name name = optionalIdent();
         if ((mods.flags & Flags.VARARGS) == 0)
             type = bracketsOpt(type);
         return toP(F.at(pos).VarDef(mods, name, type, null));
