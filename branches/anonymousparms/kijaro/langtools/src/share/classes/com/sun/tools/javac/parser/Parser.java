@@ -1829,7 +1829,7 @@ public class Parser {
         accept(LPAREN);
         JCVariableDecl formal =
             variableDeclaratorId(optFinal(Flags.PARAMETER),
-                                 qualident());
+                                 qualident(), false);
         accept(RPAREN);
         JCBlock body = block();
         return F.at(pos).Catch(formal, body);
@@ -2147,9 +2147,10 @@ public class Parser {
 
     /** VariableDeclaratorId = Ident BracketsOpt
      */
-    JCVariableDecl variableDeclaratorId(JCModifiers mods, JCExpression type) {
+    JCVariableDecl variableDeclaratorId(JCModifiers mods, JCExpression type, boolean isInterface) {
         int pos = S.pos();
-        Name name = optionalIdent();
+        Name name = isInterface ? ident(): optionalIdent();
+        
         if ((mods.flags & Flags.VARARGS) == 0)
             type = bracketsOpt(type);
         return toP(F.at(pos).VarDef(mods, name, type, null));
@@ -2584,7 +2585,7 @@ public class Parser {
                               List<JCTypeParameter> typarams,
                               boolean isInterface, boolean isVoid,
                               String dc) {
-        List<JCVariableDecl> params = formalParameters();
+        List<JCVariableDecl> params = formalParameters(isInterface);
         if (!isVoid) type = bracketsOpt(type);
         List<JCExpression> thrown = List.nil();
         if (S.token() == THROWS) {
@@ -2674,15 +2675,15 @@ public class Parser {
      *  FormalParameterList = [ FormalParameterListNovarargs , ] LastFormalParameter
      *  FormalParameterListNovarargs = [ FormalParameterListNovarargs , ] FormalParameter
      */
-    List<JCVariableDecl> formalParameters() {
+    List<JCVariableDecl> formalParameters(boolean isInterface) {
         ListBuffer<JCVariableDecl> params = new ListBuffer<JCVariableDecl>();
         JCVariableDecl lastParam = null;
         accept(LPAREN);
         if (S.token() != RPAREN) {
-            params.append(lastParam = formalParameter());
+            params.append(lastParam = formalParameter(isInterface));
             while ((lastParam.mods.flags & Flags.VARARGS) == 0 && S.token() == COMMA) {
                 S.nextToken();
-                params.append(lastParam = formalParameter());
+                params.append(lastParam = formalParameter(isInterface));
             }
         }
         accept(RPAREN);
@@ -2699,7 +2700,7 @@ public class Parser {
     /** FormalParameter = { FINAL | '@' Annotation } Type VariableDeclaratorId
      *  LastFormalParameter = { FINAL | '@' Annotation } Type '...' Ident | FormalParameter
      */
-    JCVariableDecl formalParameter() {
+    JCVariableDecl formalParameter(boolean isInterface) {
         JCModifiers mods = optFinal(Flags.PARAMETER);
         JCExpression type = type();
         if (S.token() == ELLIPSIS) {
@@ -2708,7 +2709,7 @@ public class Parser {
             type = to(F.at(S.pos()).TypeArray(type));
             S.nextToken();
         }
-        return variableDeclaratorId(mods, type);
+        return variableDeclaratorId(mods, type, isInterface);
     }
 
 /* ---------- auxiliary methods -------------- */
