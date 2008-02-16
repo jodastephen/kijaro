@@ -1046,6 +1046,18 @@ public class Attr extends JCTree.Visitor {
             if (types.isSubtype(elsetype, thentype))
                 return thentype.baseType();
 
+            if (thentype instanceof MethodType || elsetype instanceof MethodType) {  // FCM-MREF
+                if (types.isConvertible(thentype, elsetype)) {
+                    return elsetype.baseType();
+                } else if (types.isConvertible(elsetype, thentype)) {
+                    return thentype.baseType();
+                } else {
+                    log.error(pos, "neither.conditional.subtype",
+                            thentype, elsetype);
+                  return thentype.baseType();
+                }
+            }
+
             if (!allowBoxing || thentype.tag == VOID || elsetype.tag == VOID) {
                 log.error(pos, "neither.conditional.subtype",
                           thentype, elsetype);
@@ -2461,33 +2473,34 @@ public class Attr extends JCTree.Visitor {
         
         // validate that constructor exists and is accessible
         MethodSymbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, paramTypes, null);
-        MethodType adjustedType = (MethodType) sym.type.clone();
-        adjustedType.restype = sym.owner.type;
+        tree.convertFromMethodSymbol = sym;
+        MethodType crefType = sym.asConstructorMethodType();
+        result = check(tree, crefType, VAL, pkind, pt);
         
-        // assign and check types
-        MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
-        if (smiMethod != null) {
-            if (types.isSameType(smiMethod.asType(), adjustedType)) {
-                // matching smi
-                tree.convertToClassType = (ClassType) pt;
-                tree.convertToMethodSymbol = smiMethod;
-                tree.convertFromMethodSymbol = sym;
-                result = check(tree, pt, VAL, pkind, pt);
-            } else {
-                // smi, but method type does not match - provide separate error message
-                tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.smi.cref"), adjustedType, smiMethod.asType());
-                result = tree.type;
-            }
-        } else if (pt.isInterface()) {
-            // interface, but not smi - provide separate error message
-            tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.non.smi.cref"), adjustedType, pt);
-            result = tree.type;
-        } else {
-            // check for java.util.reflect.Constructor
-            site = attribType(siteTarget, env);
-            ClassType typedConstructor = new ClassType(Type.noType, List.of(site), syms.reflectConstructorType.asElement());
-            result = check(tree, typedConstructor, VAL, pkind, pt);
-        }
+//        // assign and check types
+//        MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
+//        if (smiMethod != null) {
+//            if (types.isSameType(smiMethod.asType(), adjustedType)) {
+//                // matching smi
+//                tree.convertToClassType = (ClassType) pt;
+//                tree.convertToMethodSymbol = smiMethod;
+//                tree.convertFromMethodSymbol = sym;
+//                result = check(tree, pt, VAL, pkind, pt);
+//            } else {
+//                // smi, but method type does not match - provide separate error message
+//                tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.smi.cref"), adjustedType, smiMethod.asType());
+//                result = tree.type;
+//            }
+//        } else if (pt.isInterface()) {
+//            // interface, but not smi - provide separate error message
+//            tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.non.smi.cref"), adjustedType, pt);
+//            result = tree.type;
+//        } else {
+//            // check for java.util.reflect.Constructor
+//            site = attribType(siteTarget, env);
+//            ClassType typedConstructor = new ClassType(Type.noType, List.of(site), syms.reflectConstructorType.asElement());
+//            result = check(tree, typedConstructor, VAL, pkind, pt);
+//        }
         
         System.out.println("Attr.visitConstructorReference (End)");
     }
@@ -2505,30 +2518,32 @@ public class Attr extends JCTree.Visitor {
         
         // validate that method exists and is accessible
         MethodSymbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, paramTypes, null);
+        tree.convertFromMethodSymbol = sym;
+        result = check(tree, sym.type, VAL, pkind, pt);
         
-        // assign and check types
-        MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
-        if (smiMethod != null) {
-            if (types.isSameType(smiMethod.asType(), sym.asType())) {
-                // matching smi
-                tree.convertToClassType = (ClassType) pt;
-                tree.convertToMethodSymbol = smiMethod;
-                tree.convertFromMethodSymbol = sym;
-                result = check(tree, pt, VAL, pkind, pt);
-            } else {
-                // smi, but method type does not match - provide separate error message
-                tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.smi.mref"), sym.asType(), smiMethod.asType());
-                result = tree.type;
-            }
-        } else if (pt.isInterface()) {
-            // interface, but not smi - provide separate error message
-            tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.non.smi.mref"), sym.asType(), pt);
-            result = tree.type;
-        } else {
-            // check for java.util.reflect.Method
-            site = attribType(siteTarget, env);
-            result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
-        }
+//        // assign and check types
+//        MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(pt);
+//        if (smiMethod != null) {
+//            if (types.isSameType(smiMethod.asType(), sym.asType())) {
+//                // matching smi
+//                tree.convertToClassType = (ClassType) pt;
+//                tree.convertToMethodSymbol = smiMethod;
+//                tree.convertFromMethodSymbol = sym;
+//                result = check(tree, pt, VAL, pkind, pt);
+//            } else {
+//                // smi, but method type does not match - provide separate error message
+//                tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.smi.mref"), sym.asType(), smiMethod.asType());
+//                result = tree.type;
+//            }
+//        } else if (pt.isInterface()) {
+//            // interface, but not smi - provide separate error message
+//            tree.type = chk.typeError(tree.pos(), JCDiagnostic.fragment("incompatible.types.non.smi.mref"), sym.asType(), pt);
+//            result = tree.type;
+//        } else {
+//            // check for java.util.reflect.Method
+//            site = attribType(siteTarget, env);
+//            result = check(tree, syms.reflectMethodType, VAL, pkind, pt);
+//        }
         
         System.out.println("Attr.visitMethodReference (End)");
     }
