@@ -1924,6 +1924,24 @@ public class Lower extends TreeTranslator {
     /** Visitor method: Translate a single node, boxing or unboxing if needed.
      */
     public <T extends JCTree> T translate(T tree, Type type) {
+    	if (tree instanceof JCConditional && tree.type instanceof MethodType) {  // FCM-MREF
+    		// this should only happen if both halves of conditional are the same type
+    		assert (type instanceof MethodType == false);
+    		// type must be set from parent before children are evaluated
+    		tree.type = type;
+    	}
+    	if (tree instanceof JCConstructorReference) {  // FCM-MREF
+    		// replace constructor reference MethodType with actual type
+        	assert (type instanceof ClassType);
+    		// type must be set from parent before children are evaluated
+    		tree.type = type;  // don't need to worry about generics as they are erased
+        }
+    	if (tree instanceof JCMethodReference) {  // FCM-MREF
+    		// replace method reference MethodType with actual type
+        	assert (type instanceof ClassType);
+    		// type must be set from parent before children are evaluated
+    		tree.type = type;
+        }
         return (tree == null) ? null : boxIfNeeded(translate(tree), type);
     }
 
@@ -2310,10 +2328,16 @@ public class Lower extends TreeTranslator {
 
     public void visitTypeCast(JCTypeCast tree) {
         tree.clazz = translate(tree.clazz);
-        if (tree.type.isPrimitive() != tree.expr.type.isPrimitive())
+        if (tree.type.isPrimitive() != tree.expr.type.isPrimitive()) {
+            // box / unbox primitive
             tree.expr = translate(tree.expr, tree.type);
-        else
+        } else if (tree.expr.type instanceof MethodType) {  // FCM-MREF
+            // box method reference
+            tree.expr = translate(tree.expr, tree.type);
+        } else {
+            // normal
             tree.expr = translate(tree.expr);
+        }
         result = tree;
     }
 
@@ -3105,7 +3129,7 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
-        if (tree.convertToClassType == null) {
+        if (types.singleMethodInterfaceMethodSymbol(tree.type) == null) {
             makeConstructorLiteral(tree);
         } else {
             makeConstructorReference(tree);
@@ -3152,10 +3176,10 @@ public class Lower extends TreeTranslator {
         
         // create class
         long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
-        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.convertToClassType);
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.type);
         
         // create constructor and methods
-        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;  // toString()
+        String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
         addFcmConstructor(tree, clsDef);
         addFcmSmiConstructorReference(tree, clsDef);
         addFcmToString(tree, clsDef, str);
@@ -3170,14 +3194,15 @@ public class Lower extends TreeTranslator {
     }
 
     private void addFcmSmiConstructorReference(JCConstructorReference tree, JCClassDecl clsDef) {
-        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsDef.sym);
+        MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
+        MethodSymbol smiSym = convertTo.clone(clsDef.sym);
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
         JCBlock smiBody = make.Block(0L, List.<JCStatement>nil());
         JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), smiBody);
         
         List<JCExpression> refParams = make.Idents(smiDef.params);
         
-        Type createType = tree.convertToMethodSymbol.getReturnType();
+        Type createType = convertTo.getReturnType();
         JCNewClass callExp = make.NewClass(null, null, make.QualIdent(createType.tsym), refParams, null);
         callExp.constructor = tree.convertFromMethodSymbol;
         callExp.type = createType;
@@ -3190,7 +3215,7 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
-        if (tree.convertToClassType == null) {
+        if (types.singleMethodInterfaceMethodSymbol(tree.type) == null) {
             makeMethodLiteral(tree);
         } else {
             makeMethodReference(tree);
@@ -3241,10 +3266,10 @@ public class Lower extends TreeTranslator {
         if (tree.isStaticReference()) {
             flags |= (STATIC | NOOUTERTHIS);
         }
-        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.convertToClassType);
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.type);
         
         // create constructor and methods
-        String str = "(" + tree.convertToClassType.asElement().name + ") " + tree;  // toString()
+        String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
         addFcmConstructor(tree, clsDef);
         addFcmSmiMethodReference(tree, clsDef);
         addFcmToString(tree, clsDef, str);
@@ -3259,7 +3284,8 @@ public class Lower extends TreeTranslator {
     }
 
     private void addFcmSmiMethodReference(JCMethodReference tree, JCClassDecl clsDef) {
-        MethodSymbol smiSym = tree.convertToMethodSymbol.clone(clsDef.sym);
+        MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
+        MethodSymbol smiSym = convertTo.clone(clsDef.sym);
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
         JCBlock smiBody = make.Block(0L, List.<JCStatement>nil());
         JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), smiBody);
@@ -3286,7 +3312,7 @@ public class Lower extends TreeTranslator {
             callExp = new ScopeAdjustor().translate(callExp);
         }
         JCMethodInvocation callRef = make.App(callExp, refParams);
-        callRef.setType(tree.convertToMethodSymbol.getReturnType());
+        callRef.setType(convertTo.getReturnType());
         JCStatement callRefStatement = make.Call(callRef);
         smiBody.stats = smiBody.stats.append(callRefStatement);
         

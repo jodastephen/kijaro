@@ -34,6 +34,8 @@ import com.sun.tools.javac.util.List;
 
 import com.sun.tools.javac.jvm.ClassReader;
 import com.sun.tools.javac.code.Symbol.MethodSymbol;
+import com.sun.tools.javac.code.Type.ClassType;
+import com.sun.tools.javac.code.Type.MethodType;
 import com.sun.tools.javac.comp.Infer;
 import com.sun.tools.javac.comp.Check;
 
@@ -264,10 +266,30 @@ public class Types {
 
     // <editor-fold defaultstate="collapsed" desc="isConvertible">
     /**
-     * Is t a subtype of or convertiable via boxing/unboxing
-     * convertions to s?
+     * Is t a subtype of or convertible via boxing/unboxing
+     * conversions to s?
      */
     public boolean isConvertible(Type t, Type s, Warner warn) {
+        if (t instanceof MethodType) {  // FCM-MREF
+        	if (s instanceof ClassType) {
+	            MethodSymbol smiSym = singleMethodInterfaceMethodSymbol(s);
+	            if (smiSym != null) {
+	                if (isSameType(t, smiSym.type)) {
+	                    return true;
+	                }
+	            } else {
+	            	MethodType mthType = (MethodType) t;
+	            	if (mthType.constructor) {
+                    	ClassType typedConstructor = new ClassType(Type.noType, List.of(mthType.restype), syms.reflectConstructorType.asElement());
+	            		return isAssignable(typedConstructor, s);
+	            	} else {
+	            		return isSameType(syms.reflectMethodType, s);
+	            	}
+	            }
+        	}
+            return false;
+        }
+        // primitive boxing
         boolean tPrimitive = t.isPrimitive();
         boolean sPrimitive = s.isPrimitive();
         if (tPrimitive == sPrimitive)
@@ -279,8 +301,8 @@ public class Types {
     }
 
     /**
-     * Is t a subtype of or convertiable via boxing/unboxing
-     * convertions to s?
+     * Is t a subtype of or convertible via boxing/unboxing
+     * conversions to s?
      */
     public boolean isConvertible(Type t, Type s) {
         return isConvertible(t, s, Warner.noWarnings);
@@ -319,7 +341,7 @@ public class Types {
 
     /**
      * Is t a subtype of s?<br>
-     * (not defined for Method and ForAll types)
+     * (not defined for ForAll type)
      */
     final public boolean isSubtype(Type t, Type s) {
         return isSubtype(t, s, true);
@@ -449,6 +471,11 @@ public class Types {
             }
 
             @Override
+            public Boolean visitMethodType(MethodType t, Type s) {  // FCM-MREF
+                return false;
+            }
+
+            @Override
             public Boolean visitUndetVar(UndetVar t, Type s) {
                 //todo: test against origin needed? or replace with substitution?
                 if (t == s || t.qtype == s || s.tag == ERROR || s.tag == UNKNOWN)
@@ -469,7 +496,7 @@ public class Types {
 
     /**
      * Is t a subtype of every type in given list `ts'?<br>
-     * (not defined for Method and ForAll types)<br>
+     * (not defined for ForAll types)<br>
      * Allows unchecked conversions.
      */
     public boolean isSubtypeUnchecked(Type t, List<Type> ts, Warner warn) {
@@ -886,7 +913,7 @@ public class Types {
     /**
      * Is t is castable to s?<br>
      * s is assumed to be an erased type.<br>
-     * (not defined for Method and ForAll types).
+     * (not defined for ForAll type).
      */
     public boolean isCastable(Type t, Type s, Warner warn) {
         if (t == s)
@@ -1080,6 +1107,11 @@ public class Types {
                 default:
                     return isCastable(t.bound, s, warnStack.head);
                 }
+            }
+
+            @Override
+            public Boolean visitMethodType(MethodType t, Type s) {  // FCM-MREF
+            	return isConvertible(t, s);
             }
 
             @Override

@@ -26,6 +26,15 @@ public class FCMIM {
         System.out.println("02:" + factory.create("7"));
     }
 
+//    public void processInnerMethod() throws Exception {
+//        IntegerFactory<String> factory = #(String str) {
+//            System.out.println("IM:" + this);
+//            return Integer.parseInt(str);
+//        };
+//        System.out.println("01:" + factory);
+//        System.out.println("02:" + factory.create("7"));
+//    }
+
     public Integer handle(String str) {
         return 6;
     }

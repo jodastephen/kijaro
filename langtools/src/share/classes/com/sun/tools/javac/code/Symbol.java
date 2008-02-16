@@ -1212,6 +1212,13 @@ public abstract class Symbol implements Element {
             return params;
         }
 
+        public MethodType asConstructorMethodType() {
+            MethodType conType = (MethodType) type.clone();
+            conType.restype = owner.type;
+            conType.constructor = true;
+            return conType;
+        }
+
         public Symbol asMemberOf(Type site, Types types) {
             return new MethodSymbol(flags_field, name, types.memberType(site, this), owner);
         }
