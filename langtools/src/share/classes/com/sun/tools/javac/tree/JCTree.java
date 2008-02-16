@@ -263,9 +263,13 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static final int ERRONEOUS = MODIFIERS + 1;
 
+    /** List comprehensions, of type Comprehension.
+     */
+    public static final int COMPREHENSION = ERRONEOUS + 1;   // LISTCOMP
+
     /** Unary operators, of type Unary.
      */
-    public static final int POS = ERRONEOUS + 1;             // +
+    public static final int POS = COMPREHENSION + 1;         // +
     public static final int NEG = POS + 1;                   // -
     public static final int NOT = NEG + 1;                   // !
     public static final int COMPL = NOT + 1;                 // ~
@@ -901,6 +905,45 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         @Override
         public int getTag() {
             return FOREACHLOOP;
+        }
+    }
+
+    /**
+     * List comprehension.
+     */
+    public static class JCComprehension extends JCExpression
+            implements ComprehensionTree {                      // LISTCOMP
+
+        public JCVariableDecl var;
+        public JCExpression expr;
+        public JCExpression map;
+        public JCExpression filter;
+        public Type exprTypeArg;       // Type arg of iterable expr.
+        protected JCComprehension(JCVariableDecl var, JCExpression expr,
+                JCExpression map, JCExpression filter) {
+
+            this.var = var;
+            this.expr = expr;
+            this.map = map;
+            this.filter = filter;
+            this.exprTypeArg = null; // Filled in Attr.
+        }
+        @Override
+        public void accept(Visitor v) { v.visitComprehension(this); }
+
+        public Kind getKind() { return Kind.COMPREHENSION; }
+        public JCVariableDecl getVariable() { return var; }
+        public JCExpression getExpression() { return expr; }
+        public JCExpression getMap() { return map; }
+        public JCExpression getFilter() { return filter; }
+        public Type getExprTypeArg() { return exprTypeArg; }
+        @Override
+        public <R,D> R accept(TreeVisitor<R,D> v, D d) {
+            return v.visitComprehension(this, d);
+        }
+        @Override
+        public int getTag() {
+            return COMPREHENSION;
         }
     }
 
@@ -2074,6 +2117,8 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                         List<JCExpressionStatement> step,
                         JCStatement body);
         JCEnhancedForLoop ForeachLoop(JCVariableDecl var, JCExpression expr, JCStatement body);
+        JCComprehension Comprehension(JCVariableDecl var, JCExpression expr,
+                JCExpression map, JCExpression filter);    // LISTCOMP
         JCLabeledStatement Labelled(Name label, JCStatement body);
         JCSwitch Switch(JCExpression selector, List<JCCase> cases);
         JCCase Case(JCExpression pat, List<JCStatement> stats);
@@ -2138,6 +2183,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitWhileLoop(JCWhileLoop that)         { visitTree(that); }
         public void visitForLoop(JCForLoop that)             { visitTree(that); }
         public void visitForeachLoop(JCEnhancedForLoop that) { visitTree(that); }
+        public void visitComprehension(JCComprehension that) { visitTree(that); }  // LISTCOMP
         public void visitLabelled(JCLabeledStatement that)   { visitTree(that); }
         public void visitSwitch(JCSwitch that)               { visitTree(that); }
         public void visitCase(JCCase that)                   { visitTree(that); }

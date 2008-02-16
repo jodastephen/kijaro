@@ -229,6 +229,14 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
+    public JCComprehension Comprehension(JCVariableDecl var, JCExpression expr,
+            JCExpression map, JCExpression filter) {        // LISTCOMP
+
+        JCComprehension tree = new JCComprehension(var, expr, map, filter);
+        tree.pos = pos;
+        return tree;
+    }
+
     public JCLabeledStatement Labelled(Name label, JCStatement body) {
         JCLabeledStatement tree = new JCLabeledStatement(label, body);
         tree.pos = pos;

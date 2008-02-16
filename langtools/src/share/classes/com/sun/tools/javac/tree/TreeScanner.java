@@ -125,6 +125,13 @@ public class TreeScanner extends Visitor {
         scan(tree.body);
     }
 
+    public void visitComprehension(JCComprehension tree) {    // LISTCOMP
+        scan(tree.var);
+        scan(tree.expr);
+        scan(tree.map);
+        scan(tree.filter);
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         scan(tree.body);
     }

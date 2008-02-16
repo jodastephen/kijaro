@@ -596,6 +596,24 @@ public class Pretty extends JCTree.Visitor {
         }
     }
 
+    public void visitComprehension(JCComprehension tree) {     // LISTCOMP
+        try {
+            print("[");
+            printExpr(tree.map);
+            print(" for ");
+            printExpr(tree.var);
+            print(" : ");
+            printExpr(tree.expr);
+            if (tree.filter != null) {
+                print(" if ");
+                printExpr(tree.filter);
+            }
+            print("]");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         try {
             print(tree.label + ": ");

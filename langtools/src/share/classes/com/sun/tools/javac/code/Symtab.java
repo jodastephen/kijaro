@@ -122,6 +122,7 @@ public class Symtab {
     public final Type throwableType;
     public final Type errorType;
     public final Type illegalArgumentExceptionType;
+    public final Type unsupportedOperationExceptionType; // LISTCOMP
     public final Type exceptionType;
     public final Type runtimeExceptionType;
     public final Type classNotFoundExceptionType;
@@ -137,6 +138,7 @@ public class Symtab {
     public final Type arraysType;
     public final Type iterableType;
     public final Type iteratorType;
+    public final Type noSuchElementExceptionType; // LISTCOMP
     public final Type annotationTargetType;
     public final Type overrideType;
     public final Type retentionType;
@@ -353,6 +355,7 @@ public class Symtab {
         serializableType = enterClass("java.io.Serializable");
         errorType = enterClass("java.lang.Error");
         illegalArgumentExceptionType = enterClass("java.lang.IllegalArgumentException");
+        unsupportedOperationExceptionType = enterClass("java.lang.UnsupportedOperationException"); // LISTCOMP
         exceptionType = enterClass("java.lang.Exception");
         runtimeExceptionType = enterClass("java.lang.RuntimeException");
         classNotFoundExceptionType = enterClass("java.lang.ClassNotFoundException");
@@ -377,6 +380,7 @@ public class Symtab {
             ? enterClass("java.lang.Iterable")
             : enterClass("java.util.Collection");
         iteratorType = enterClass("java.util.Iterator");
+        noSuchElementExceptionType = enterClass("java.util.NoSuchElementException"); // LISTCOMP
         annotationTargetType = enterClass("java.lang.annotation.Target");
         overrideType = enterClass("java.lang.Override");
         retentionType = enterClass("java.lang.annotation.Retention");

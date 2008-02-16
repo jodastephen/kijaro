@@ -507,6 +507,14 @@ public class TransTypes extends TreeTranslator {
         result = tree;
     }
 
+    public void visitComprehension(JCComprehension tree) {          // LISTCOMP
+        tree.var = translate(tree.var, null);
+        tree.expr = translate(tree.expr, erasure(tree.expr.type));
+        tree.map = translate(tree.map, null);
+        tree.filter = translate(tree.filter, null);
+        result = tree;
+    }
+
     public void visitSwitch(JCSwitch tree) {
         Type selsuper = types.supertype(tree.selector.type);
         boolean enumSwitch = selsuper != null &&
