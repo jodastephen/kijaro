@@ -348,6 +348,18 @@ public class Check {
             log.error(pos, "assignment.to.extends-bound", req);
             return syms.errType;
         }
+        if (found instanceof MethodType) {
+            MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(req);
+            if (smiMethod != null) {
+                // smi, but method type does not match
+                String err = ((MethodType) found).constructor ? "incompatible.types.smi.cref" : "incompatible.types.smi.mref";
+                return typeError(pos, JCDiagnostic.fragment(err), found, req);
+            } else if (req.isInterface()) {
+                // interface, but not smi - provide separate error message
+                String err = ((MethodType) found).constructor ? "incompatible.types.non.smi.cref" : "incompatible.types.non.smi.mref";
+                return typeError(pos, JCDiagnostic.fragment(err), found, req);
+            }
+        }
         return typeError(pos, JCDiagnostic.fragment("incompatible.types"), found, req);
     }
 
