@@ -503,6 +503,7 @@ public class Name implements javax.lang.model.element.Name {
             iterator = fromString("iterator");
             hasNext = fromString("hasNext");
             next = fromString("next");
+            remove = fromString("remove");      // LISTCOMP
             AnnotationDefault = fromString("AnnotationDefault");
             ordinal = fromString("ordinal");
             equals = fromString("equals");
@@ -637,6 +638,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name iterator;
         public final Name hasNext;
         public final Name next;
+        public final Name remove;       // LISTCOMP
         public final Name AnnotationDefault;
         public final Name ordinal;
         public final Name equals;

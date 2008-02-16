@@ -188,6 +188,14 @@ public class TreeTranslator extends JCTree.Visitor {
         result = tree;
     }
 
+    public void visitComprehension(JCComprehension tree) {    // LISTCOMP
+        tree.var = translate(tree.var);
+        tree.expr = translate(tree.expr);
+        tree.map = translate(tree.map);
+        tree.filter = translate(tree.filter);
+        result = tree;
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         tree.body = translate(tree.body);
         result = tree;

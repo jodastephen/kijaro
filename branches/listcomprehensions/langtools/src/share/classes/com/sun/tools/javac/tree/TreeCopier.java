@@ -183,6 +183,15 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         return M.at(t.pos).ForeachLoop(var, expr, body);
     }
 
+    public JCTree visitComprehension(ComprehensionTree node, P p) { // LISTCOMP
+        JCComprehension t = (JCComprehension) node;
+        JCVariableDecl var = copy(t.var, p);
+        JCExpression expr = copy(t.expr, p);
+        JCExpression map = copy(t.map, p);
+        JCExpression filter = copy(t.filter, p);
+        return M.at(t.pos).Comprehension(var, expr, map, filter);
+    }
+
     public JCTree visitForLoop(ForLoopTree node, P p) {
         JCForLoop t = (JCForLoop) node;
         List<JCStatement> init = copy(t.init, p);

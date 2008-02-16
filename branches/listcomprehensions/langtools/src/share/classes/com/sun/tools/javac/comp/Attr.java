@@ -815,6 +815,48 @@ public class Attr extends JCTree.Visitor {
         result = null;
     }
 
+    public void visitComprehension(JCComprehension tree) {          // LISTCOMP
+        // Create a nested environment for our loop variable.
+        Env<AttrContext> loopEnv =
+            env.dup(env.tree, env.info.dup(env.info.scope.dup()));
+
+        // Recurse on the variable.
+        attribStat(tree.var, loopEnv);
+
+        // Recurse on the expression.
+        Type exprType = attribExpr(tree.expr, loopEnv);
+        // Keep track of the type arg of the expression, since
+        // it's stripped by the time we get to Lower, where we need
+        // it for casting.
+        List<Type> typeArgs = exprType.getTypeArguments();
+        if (typeArgs.nonEmpty()) {
+            // Iterable can only have one, so just pick it.
+            tree.exprTypeArg = typeArgs.head;
+        }
+        chk.checkNonVoid(tree.pos(), exprType);
+
+        // Recurse on map.
+        Type mapType = attribExpr(tree.map, loopEnv);
+        chk.checkNonVoid(tree.pos(), mapType);
+
+        // Recurse on filter.
+        Type filterType = null;
+        if (tree.filter != null) {
+            attribExpr(tree.filter, loopEnv, syms.booleanType);
+        }
+        loopEnv.info.scope.leave();
+
+        // The type of the comprehension is Iterable parameterized on the
+        // type of the map expression. Box it up first if necessary.
+        Type iterableOfMap = syms.iterableType;
+        if (mapType.isPrimitive()) {
+            mapType = types.boxedClass(mapType).type;
+        }
+        iterableOfMap = new ClassType(iterableOfMap.getEnclosingType(),
+                List.of(mapType), iterableOfMap.tsym);
+        result = check(tree, iterableOfMap, VAL, pkind, pt);
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         // Check that label is not used in an enclosing statement
         Env<AttrContext> env1 = env;

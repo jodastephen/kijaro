@@ -838,6 +838,7 @@ public class Parser {
      *                   | "." ( CLASS | THIS | [TypeArguments] SUPER Arguments | NEW [TypeArguments] InnerCreator )
      *                   ]
      *                 | BasicType BracketsOpt "." CLASS
+     *                 | "[" Expression ComprehensionFor [ComprehensionIf] "]"
      *  PrefixOp       = "++" | "--" | "!" | "~" | "+" | "-"
      *  PostfixOp      = "++" | "--"
      *  Type3          = Ident { "." Ident } [TypeArguments] {TypeSelector} BracketsOpt
@@ -850,6 +851,8 @@ public class Parser {
      *                 | "[" Expression "]"
      *  TypeSelector   = "." Ident [TypeArguments]
      *  SuperSuffix    = Arguments | "." Ident [Arguments]
+     *  ComprehensionFor = "for" FormalParameter ":" Expression
+     *  ComprehensionIf = "if" Expression
      */
     protected JCExpression term3() {
         int pos = S.pos();
@@ -1066,6 +1069,43 @@ public class Parser {
             } else {
                 return illegal();
             }
+            break;
+        case LBRACKET:  // LISTCOMP
+            // Start of list comprehension.
+            S.nextToken();
+            if (typeArgs != null || (mode & EXPR) == 0) {
+                return illegal();
+            }
+            mode = EXPR;
+
+            // Map clause.
+            JCExpression map = term(EXPR);
+
+            // For clause.
+            accept(FOR);
+            List<JCStatement> inits;
+
+            // Parse the type, modifiers, and name of our loop variable.
+            JCExpression type = term(TYPE);
+            JCModifiers mods = modifiersOpt();
+            Name variableName = ident();
+            JCVariableDecl variableDecl = toP(F.at(S.pos()).VarDef(mods,
+                        variableName, type, null));
+
+            // Iterable expression.
+            accept(COLON);
+            JCExpression expr = expression();
+
+            // Optional "if" clause.
+            JCExpression filter = null;
+            if (S.token() == IF) {
+                S.nextToken();
+                filter = expression();
+            }
+            accept(RBRACKET);
+
+            // Build AST.
+            t = F.at(pos).Comprehension(variableDecl, expr, map, filter);
             break;
         default:
             return illegal();

@@ -975,7 +975,8 @@ public class Lower extends TreeTranslator {
             }
             // Otherwise replace the variable by its proxy.
             sym = proxies.lookup(proxyName(sym.name)).sym;
-            assert sym != null && (sym.flags_field & FINAL) != 0;
+            assert sym != null;
+            assert (sym.flags_field & FINAL) != 0;
             tree = make.at(tree.pos).Ident(sym);
         }
         JCExpression base = (tree.getTag() == JCTree.SELECT) ? ((JCFieldAccess) tree).selected : null;
@@ -2319,6 +2320,7 @@ public class Lower extends TreeTranslator {
         ClassSymbol c = (ClassSymbol)tree.constructor.owner;
 
         // Box arguments, if necessary
+        assert tree.constructor.owner != null;
         boolean isEnum = (tree.constructor.owner.flags() & ENUM) != 0;
         List<Type> argTypes = tree.constructor.type.getParameterTypes();
         if (isEnum) argTypes = argTypes.prepend(syms.intType).prepend(syms.stringType);
@@ -2562,6 +2564,8 @@ public class Lower extends TreeTranslator {
     /** Expand a boxing or unboxing conversion if needed. */
     @SuppressWarnings("unchecked") // XXX unchecked
     <T extends JCTree> T boxIfNeeded(T tree, Type type) {
+        assert tree != null;
+        assert tree.type != null;
         boolean havePrimitive = tree.type.isPrimitive();
         if (havePrimitive == type.isPrimitive())
             return tree;
@@ -2952,6 +2956,548 @@ public class Lower extends TreeTranslator {
                         body));
             patchTargets(body, tree, result);
         }
+
+    /**
+        Translates a comprehension to its de-sugared version. A
+        comprehension is in this form:
+
+        <pre>
+             Iterable<T1> &lt;- [A for T2 B : C&lt;T3&gt; if D]
+        </pre>
+
+        where:
+
+        <ul>
+            <li>A is an expression of B evaluating to type T1</li>
+            <li>T2 is a type assignable from T3</li>
+            <li>B is an identifier</li>
+            <li>C is an Iterable parameterized on T3</li>
+            <li>T3 is a type</li>
+            <li>D is an expression of B evaluating to boolean</li>
+        </ul>
+
+        The "if D" clause is optional. If omitted, "D" default to "true".
+        The entire expression evaluates to an Iterable&lt;T1&gt;. Note
+        that any free variables in A, C, or D must be marked "final", as
+        in anonymous inner classes. The expression is translated to:
+
+        <pre>
+        Iterable&lt;T1&gt; newList2 = new Iterable&lt;T1&gt;(C) {
+            // Evaluate C only once; that's likely what the caller expects.
+            private final Iterable&lt;T3&gt; lc$mIterable;
+
+            &lt;init&gt;(Iterable&lt;T3&gt; lc$mIterable) {
+                super();
+                this.lc$mIterable = lc$mIterable;
+            }
+
+            public Iterator&lt;T1&gt; iterator() {
+                return new Iterator&lt;T1&gt;(lc$mIterable.iterator()) {
+                    private final Iterator&lt;T3&gt; lc$mIterator;
+                    private boolean lc$mKnowIfHasNext = false;
+                    // Can't use lc$mNext == null since null is a valid element.
+                    private boolean lc$mHasNext;
+                    private T3 lc$mNext;
+
+                    &lt;init&gt;(Iterator&lt;T3&gt; lc$mIterator) {
+                        super();
+                        this.lc$mIterator = lc$mIterator;
+                    }
+
+                    public boolean hasNext() {
+                        // This function is idempotent.
+                        if (lc$mKnowIfHasNext) {
+                            return lc$mHasNext;
+                        }
+
+                        // We'll figure it out one way or another.
+                        lc$mKnowIfHasNext = true;
+                        lc$mHasNext = false;
+
+                        while (lc$mIterator.hasNext()) {
+                            lc$mNext = (T3)lc$mIterator.next();
+                            T2 x = lc$mNext;
+                            if (D) {
+                                lc$mHasNext = true;
+                                break;
+                            }
+                        }
+
+                        return lc$mHasNext;
+                    }
+
+                    public T1 next() {
+                        // We must call our own hasNext()
+                        // because it does something.
+                        if (!hasNext()) {
+                            throw new NoSuchElementException();
+                        }
+
+                        lc$mKnowIfHasNext = false;
+                        T2 x = lc$mNext;
+                        return A;
+                    }
+
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+        };
+        </pre>
+    */
+
+    public void visitComprehension(JCComprehension tree) {          // LISTCOMP
+        // Start process of changing the AST.
+        make_at(tree.pos());
+
+        // Make an anonymous class that implements Iterator. We will create an
+        // instance of it whenever our comprehension is invoked.
+        JCClassDecl iteratorClsDef = makeLcIteratorClass(translate(tree.var),
+                translate(tree.map), translate(tree.filter), tree.exprTypeArg);
+
+        // Make an anonymous class that implements Iterable. The comprehension
+        // will be an instance of this class.
+        JCClassDecl iterableClsDef = makeLcIterableClass(iteratorClsDef);
+
+        // Create a new instance of our class. The constructor takes the
+        // expression that evaluates to an Iterable.
+        JCNewClass newClass = makeNewClass(iterableClsDef.type,
+                List.<JCExpression>of(translate(tree.expr)));
+
+        // Return the updated AST.
+        result = translate(newClass);
+    }
+
+    private JCClassDecl makeLcIteratorClass(JCVariableDecl var, JCExpression map,     // LISTCOMP
+            JCExpression filter, Type iterableTypeArg) {
+
+        // Make the anonymous inner Iterator class for this comprehension.
+        long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
+        JCClassDecl iteratorClsDef = makeLcAnonymousInnerClass(flags, syms.iteratorType);
+
+        // Add various instance fields.
+        VarSymbol iteratorSym = addLcFinalIteratorField(iteratorClsDef);
+        VarSymbol knowIfHasNextSym = addLcKnowIfHasNextField(iteratorClsDef);
+        VarSymbol hasNextSym = addLcHasNextField(iteratorClsDef);
+        VarSymbol nextSym = addLcNextField(iteratorClsDef, iterableTypeArg);
+
+        // Add a constructor, which takes the Iterator and stores it in the final field.
+        addLcIteratorConstructor(iteratorClsDef, iteratorSym);
+
+        // Add the three methods required by Iterator.
+        addLcHasNextMethod(iteratorClsDef, iteratorSym, knowIfHasNextSym, hasNextSym, nextSym,
+                var, filter, iterableTypeArg);
+        addLcNextMethod(iteratorClsDef, iteratorSym, knowIfHasNextSym, nextSym,
+                var, map, iterableTypeArg);
+        addLcRemoveMethod(iteratorClsDef);
+
+        return iteratorClsDef;
+    }
+
+    private VarSymbol addLcFinalIteratorField(JCClassDecl iteratorClsDef) {         // LISTCOMP
+        // Add this final field to the inner anonymous class.
+        //
+        //     private final Iterator&lt;T3&gt; lc$mIterator;
+        //
+        // We initialize it in the constructor.
+
+        long flags = FINAL | SYNTHETIC | PRIVATE;
+        VarSymbol iteratorSym = new VarSymbol(flags, names.fromString("lc$mIterator"),
+                syms.iteratorType, iteratorClsDef.sym);
+        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(iteratorSym, null);
+        iteratorClsDef.sym.members().enter(iteratorSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+
+        return iteratorSym;
+    }
+
+    private VarSymbol addLcKnowIfHasNextField(JCClassDecl iteratorClsDef) {         // LISTCOMP
+        // Generate this code:
+        //
+        //     private boolean lc$mKnowIfHasNext = false;
+
+        long flags = SYNTHETIC | PRIVATE;
+        VarSymbol knowIfHasNextSym = new VarSymbol(flags, names.fromString("lc$mKnowIfHasNext"),
+                syms.booleanType, iteratorClsDef.sym);
+        JCExpression falseExpr = makeLit(syms.booleanType, 0);
+        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(knowIfHasNextSym, falseExpr);
+        iteratorClsDef.sym.members().enter(knowIfHasNextSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+
+        return knowIfHasNextSym;
+    }
+
+    private VarSymbol addLcHasNextField(JCClassDecl iteratorClsDef) {           // LISTCOMP
+        // Generate this code:
+        //
+        //     private boolean lc$mHasNext;
+
+        long flags = SYNTHETIC | PRIVATE;
+        VarSymbol hasNextSym = new VarSymbol(flags, names.fromString("lc$mHasNext"),
+                syms.booleanType, iteratorClsDef.sym);
+        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(hasNextSym, null);
+        iteratorClsDef.sym.members().enter(hasNextSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+
+        return hasNextSym;
+    }
+
+    private VarSymbol addLcNextField(JCClassDecl iteratorClsDef, Type iterableTypeArg) {// LISTCOMP
+        // Generate this code:
+        //
+        //     private T3 lc$mNext;
+
+        long flags = SYNTHETIC | PRIVATE;
+        VarSymbol nextSym = new VarSymbol(flags, names.fromString("lc$mNext"),
+                iterableTypeArg, iteratorClsDef.sym);
+        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(nextSym, null);
+        iteratorClsDef.sym.members().enter(nextSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+
+        return nextSym;
+    }
+
+    private void addLcIteratorConstructor(JCClassDecl iteratorClsDef,
+            VarSymbol iteratorSym) {                                            // LISTCOMP
+
+        // Define the constructor. It takes an Iterator parameter.
+        MethodType conType = new MethodType(List.<Type>of(syms.iteratorType), syms.voidType,
+                List.<Type>nil(), iteratorClsDef.sym);
+        MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, iteratorClsDef.sym);
+        VarSymbol iteratorParamSym = new VarSymbol(FINAL | SYNTHETIC,
+                names.fromString("lc$mIterator"), syms.iteratorType, conSym);
+        conSym.params = List.<VarSymbol>of(iteratorParamSym);
+
+        // Call the Object constructor (super()).
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.objectType;
+        zuper.sym = lookupConstructor(make_pos, syms.objectType, List.<Type>nil());
+        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(),
+                zuper, List.<JCExpression>nil());
+        callSuper.setType(syms.voidType);
+        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+
+        // Assign our local lc$mIterator field from the constructor's parameter.
+        JCExpression iteratorRef = make.Select(make.This(iteratorClsDef.type), iteratorSym);
+        JCExpression iteratorParamRef = make.Ident(iteratorParamSym);
+        JCExpression initIteratorExpr = make.Assign(iteratorRef, iteratorParamRef);
+        initIteratorExpr.setType(iteratorRef.type);
+        JCExpressionStatement initIteratorStatement = make.Exec(initIteratorExpr);
+
+        // Make the constructor body.
+        JCBlock conBody = make.Block(0L,
+                List.<JCStatement>of(callSuperStatement, initIteratorStatement));
+        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
+        iteratorClsDef.sym.members().enter(conSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.append(conDef);
+    }
+
+    private void addLcHasNextMethod(JCClassDecl iteratorClsDef, VarSymbol iteratorSym,
+            VarSymbol knowIfHasNextSym, VarSymbol hasNextSym, VarSymbol nextSym,
+            JCVariableDecl var, JCExpression filter, Type iterableTypeArg) {            // LISTCOMP
+
+        // Declare the hasNext() method.
+        MethodType hasNextMethodType = new MethodType(
+                List.<Type>nil(), syms.booleanType,
+                List.<Type>nil(), iteratorClsDef.sym);
+        MethodSymbol hasNextMethodSym = new MethodSymbol(PUBLIC,
+                names.hasNext, hasNextMethodType, iteratorClsDef.type.tsym);
+
+        // Convenience, we use it a lot.
+        Type clsType = iteratorClsDef.type;
+
+        ListBuffer<JCStatement> stats = new ListBuffer<JCStatement>();
+
+        // If we know if we have a next, return that immediately.
+        stats.append(make.If(make.Select(make.This(clsType), knowIfHasNextSym),
+                             make.Return(make.Select(make.This(clsType), hasNextSym)),
+                             null));
+        // We will know if we have a next by the end of this method.
+        stats.append(
+                make.Exec(
+                    make.Assign(make.Select(make.This(clsType), knowIfHasNextSym),
+                                makeLit(syms.booleanType, 1)).setType(syms.booleanType)));
+        stats.append(
+                make.Exec(
+                    make.Assign(make.Select(make.This(clsType), hasNextSym),
+                                makeLit(syms.booleanType, 0)).setType(syms.booleanType)));
+
+        // Make body of while loop.
+        ListBuffer<JCStatement> whileStats = new ListBuffer<JCStatement>();
+
+        // Get the next item of the source iterator.
+        whileStats.append(
+                make.Exec(
+                    make.Assign(
+                        make.Select(make.This(clsType), nextSym),
+                        make.TypeCast(iterableTypeArg,
+                                      makeCall(make.Select(make.This(clsType), iteratorSym),
+                                               names.next,
+                                               List.<JCExpression>nil())))
+                    .setType(iterableTypeArg)));
+
+        // In the "if" body we say that there is a next. We keep the breakStatement
+        // around so we can point it at the while loop later.
+        JCBreak breakStatement = make.Break(null);
+        JCStatement ifBody = make.Block(0L,
+                List.of(
+                    make.Exec(
+                        make.Assign(make.Select(make.This(clsType), hasNextSym),
+                                    makeLit(syms.booleanType, 1)).setType(syms.booleanType)),
+                    breakStatement));
+
+        // If we have no filter, then we have a next.
+        if (filter == null) {
+            whileStats.append(ifBody);
+        } else {
+            // Otherwise, evaluate the filter, and only if it's true do we have a next.
+
+            // Make the variable final, and initialize it.
+            VarSymbol varSym = var.sym.clone(hasNextMethodSym);
+            varSym.flags_field |= FINAL; // Why not, might be necessary if expr is inner class.
+            varSym.owner = hasNextMethodSym;
+            JCVariableDecl localVar = make.VarDef(varSym,
+                    make.Select(make.This(clsType), nextSym));
+
+            // Declare the local variable.
+            whileStats.append(localVar);
+
+            // Go through the filter expression and change all references to our variable to
+            // the local instance. Otherwise it's pointing to the one in the original context.
+            substituteSymbol(filter, varSym);
+
+            whileStats.append(make.If(filter, ifBody, null));
+        }
+
+        // As long as the original iterator has a next, keep trying.
+        JCWhileLoop whileLoop = make.WhileLoop(makeCall(make.Select(make.This(clsType),
+                                                                    iteratorSym),
+                                                        names.hasNext,
+                                                        List.<JCExpression>nil()),
+                                               make.Block(0L, whileStats.toList()));
+        breakStatement.target = whileLoop;
+        stats.append(whileLoop);
+
+        // Return whether we have a next.
+        stats.append(make.Return(make.Select(make.This(clsType), hasNextSym)));
+
+        // Create the actual hasNext() method and add it to the class.
+        JCBlock hasNextMethodBody = make.Block(0L, stats.toList());
+        JCMethodDecl hasNextMethodDef = make.MethodDef(hasNextMethodSym, hasNextMethodBody);
+        iteratorClsDef.sym.members().enter(hasNextMethodSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.append(hasNextMethodDef);
+    }
+
+    // Find all identifiers that have a symbol with the same name as "newSym" and
+    // point explicitly to "newSym". Does nothing if "tree" is null.
+    private void substituteSymbol(JCTree tree, final Symbol newSym) {           // LISTCOMP
+        class SymbolSubstituter extends TreeScanner {
+            public void visitIdent(JCIdent tree) {
+                result = tree;
+                if (tree.sym.name.equals(newSym.name)) {
+                    tree.sym = newSym;
+                }
+            }
+        }
+        new SymbolSubstituter().scan(tree);
+    }
+
+    private void addLcNextMethod(JCClassDecl iteratorClsDef, VarSymbol iteratorSym,
+            VarSymbol knowIfHasNextSym, VarSymbol nextSym,
+            JCVariableDecl var, JCExpression map, Type iterableTypeArg) {           // LISTCOMP
+
+        // Declare the next() method.
+        MethodType nextMethodType = new MethodType(
+                List.<Type>nil(), syms.objectType,
+                List.<Type>nil(), iteratorClsDef.sym);
+        final MethodSymbol nextMethodSym = new MethodSymbol(PUBLIC,
+                names.next, nextMethodType, iteratorClsDef.type.tsym);
+
+        // Convenience, we use it a lot.
+        Type clsType = iteratorClsDef.type;
+
+        // The statements of our method:
+        ListBuffer<JCStatement> stats = new ListBuffer<JCStatement>();
+
+        // First, call our own hasNext() method, in case the caller didn't do
+        // that.  Usually hasNext() doesn't do anything, but ours does.  If we
+        // don't have a next, throw an exception.
+        stats.append(make.If(make.Unary(JCTree.NOT,
+                                        makeCall(make.This(clsType),
+                                                 names.hasNext,
+                                                 List.<JCExpression>nil()))
+                                        .setType(syms.booleanType),
+                             make.Throw(makeNewClass(syms.noSuchElementExceptionType,
+                                                     List.<JCExpression>nil())),
+                             null));
+
+        // Set knowIfHasNext to false, since we now have used up an element and must
+        // fetch the next one next time.
+        stats.append(
+                make.Exec(
+                    make.Assign(make.Select(make.This(clsType), knowIfHasNextSym),
+                                makeLit(syms.booleanType, 0)).setType(syms.booleanType)));
+
+        // Make the variable final, and initialize it.
+        VarSymbol varSym = var.sym.clone(nextMethodSym);
+        varSym.flags_field |= FINAL; // Why not, might be necessary if expr is inner class.
+        varSym.owner = nextMethodSym;
+        JCVariableDecl localVar = make.VarDef(varSym, make.Select(make.This(clsType), nextSym));
+
+        // Declare the local variable.
+        stats.append(localVar);
+
+        // Go through the map expression and change all references to our variable to
+        // the local instance. Otherwise it's pointing to the one in the original context.
+        substituteSymbol(map, varSym);
+
+        // Return the result of the map expression.
+        JCStatement returnStatement = make.Return(map);
+        stats.append(returnStatement);
+
+        // Create the actual next() method and add it to the class.
+        JCBlock nextMethodBody = make.Block(0L, stats.toList());
+        JCMethodDecl nextMethodDef = make.MethodDef(nextMethodSym, nextMethodBody);
+        iteratorClsDef.sym.members().enter(nextMethodSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.append(nextMethodDef);
+    }
+
+    private void addLcRemoveMethod(JCClassDecl iteratorClsDef) {            // LISTCOMP
+        // Declare the remove() method.
+        MethodType removeMethodType = new MethodType(
+                List.<Type>nil(), syms.voidType,
+                List.<Type>nil(), iteratorClsDef.sym);
+        MethodSymbol removeMethodSym = new MethodSymbol(PUBLIC,
+                names.remove, removeMethodType, iteratorClsDef.type.tsym);
+
+        // Throw UnsupportedOperationException().
+        JCStatement throwStatement = make.Throw(
+                makeNewClass(syms.unsupportedOperationExceptionType, List.<JCExpression>nil()));
+
+        // Create the actual remove() method and add it to the class.
+        JCBlock removeMethodBody = make.Block(0L, List.of(throwStatement));
+        JCMethodDecl removeMethodDef = make.MethodDef(removeMethodSym, removeMethodBody);
+        iteratorClsDef.sym.members().enter(removeMethodSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.append(removeMethodDef);
+    }
+
+    private JCClassDecl makeLcIterableClass(JCClassDecl iteratorClsDef) {           // LISTCOMP
+        // Make the anonymous inner Iterable class for this comprehension.
+        long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
+        JCClassDecl iterableClsDef = makeLcAnonymousInnerClass(flags, syms.iterableType);
+
+        // Add an instance field for storing the passed-in iterable.
+        VarSymbol iterableSym = addLcFinalIterableField(iterableClsDef);
+
+        // Add a constructor, which takes the Iterable and stores it in the final field.
+        addLcIterableConstructor(iterableClsDef, iterableSym);
+
+        // Add the iterator() method required by Iterable interface.
+        addLcIteratorMethod(iterableClsDef, iterableSym, iteratorClsDef);
+
+        return iterableClsDef;
+    }
+
+    private JCClassDecl makeLcAnonymousInnerClass(long flags, Type ifaceType) {         // LISTCOMP
+        // XXX Combine this with Fcm's version.
+        ClassSymbol clsSym = makeEmptyClass(flags, currentClass);
+
+        // Need this to make it an anonymous inner class (owned by the method).
+        clsSym.owner = currentMethodSym;
+        ClassType clsType = (ClassType) clsSym.type;
+
+        // Need this to make it an inner class (owned by the class).
+        clsType.setEnclosingType(currentClass.type);
+        clsType.interfaces_field = List.<Type>of(ifaceType);
+        JCClassDecl clsDef = classDef(clsSym);
+        clsDef.implementing = List.<JCExpression>of(make.Type(ifaceType));
+        return clsDef;
+    }
+
+    private VarSymbol addLcFinalIterableField(JCClassDecl iterableClsDef) {         // LISTCOMP
+        // We must add this final field to the outer anonymous class, so that
+        // the iterable is only evaluated once, not each time the comprehension
+        // is invoked.
+        //
+        //     private final Iterable&lt;T3&gt; lc$mIterable;
+        //
+        // We initialize it in the constructor.
+
+        long flags = FINAL | SYNTHETIC | PRIVATE;
+        VarSymbol iterableSym = new VarSymbol(flags, names.fromString("lc$mIterable"),
+                syms.iterableType, iterableClsDef.sym);
+        JCVariableDecl iterableDef = make.at(make_pos).VarDef(iterableSym, null);
+        iterableClsDef.sym.members().enter(iterableSym);
+        iterableClsDef.defs = iterableClsDef.defs.prepend(iterableDef);
+
+        return iterableSym;
+    }
+
+    private void addLcIterableConstructor(JCClassDecl iterableClsDef,
+            VarSymbol iterableSym) {                                                // LISTCOMP
+
+        // Define the constructor. It takes an Iterable parameter.
+        MethodType conType = new MethodType(List.<Type>of(syms.iterableType), syms.voidType,
+                List.<Type>nil(), iterableClsDef.sym);
+        MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, iterableClsDef.sym);
+        VarSymbol iterableParamSym = new VarSymbol(FINAL | SYNTHETIC,
+                names.fromString("lc$mIterable"), syms.iterableType, conSym);
+        conSym.params = List.<VarSymbol>of(iterableParamSym);
+
+        // Call the Object constructor (super()).
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.objectType;
+        zuper.sym = lookupConstructor(make_pos, syms.objectType, List.<Type>nil());
+        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(),
+                zuper, List.<JCExpression>nil());
+        callSuper.setType(syms.voidType);
+        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+
+        // Assign our local lc$mIterable field.
+        JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), iterableSym);
+        JCExpression iterableParamRef = make.Ident(iterableParamSym);
+        JCExpression initIterableExpr = make.Assign(iterableRef, iterableParamRef);
+        initIterableExpr.setType(iterableRef.type);
+        JCExpressionStatement initIterableStatement = make.Exec(initIterableExpr);
+
+        // Make the constructor body.
+        JCBlock conBody = make.Block(0L,
+                List.<JCStatement>of(callSuperStatement, initIterableStatement));
+        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
+        iterableClsDef.sym.members().enter(conSym);
+        iterableClsDef.defs = iterableClsDef.defs.append(conDef);
+    }
+
+    private void addLcIteratorMethod(JCClassDecl iterableClsDef,
+            VarSymbol iterableSym, JCClassDecl iteratorClsDef) {                    // LISTCOMP
+
+        // Declare the iterator() method.
+        MethodType iteratorMethodType = new MethodType(
+                List.<Type>nil(), syms.iteratorType,
+                List.<Type>nil(), iterableClsDef.sym);
+        MethodSymbol iteratorMethodSym = new MethodSymbol(PUBLIC,
+                names.iterator, iteratorMethodType, iterableClsDef.type.tsym);
+
+        // Call lc$mIterable.iterator().
+        JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), iterableSym);
+        JCMethodInvocation callIterator = makeCall(iterableRef,
+                names.iterator, List.<JCExpression>nil());
+        callIterator.type = syms.iteratorType;
+
+        // Pass that to a new instance of our Iterator class.
+        JCNewClass newClass = makeNewClass(iteratorClsDef.type,
+                List.<JCExpression>of(callIterator));
+
+        // Return the new instance.
+        JCStatement returnStatement = make.Return(newClass);
+
+        // Create the actual iterator() method and add it to the class.
+        JCBlock iteratorMethodBody = make.Block(0L, List.of(returnStatement));
+        JCMethodDecl iteratorMethodDef = make.MethodDef(iteratorMethodSym, iteratorMethodBody);
+        iterableClsDef.sym.members().enter(iteratorMethodSym);
+        iterableClsDef.defs = iterableClsDef.defs.append(iteratorMethodDef);
+    }
 
     public void visitVarDef(JCVariableDecl tree) {
         MethodSymbol oldMethodSym = currentMethodSym;

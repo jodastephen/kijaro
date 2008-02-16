@@ -1099,6 +1099,10 @@ public class Gen extends JCTree.Visitor {
         throw new AssertionError(); // should have been removed by Lower.
     }
 
+    public void visitComprehension(JCComprehension tree) { // LISTCOMP
+        throw new AssertionError(); // should have been removed by Lower.
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         Env<GenContext> localEnv = env.dup(tree, new GenContext());
         genStat(tree.body, localEnv, CRT_STATEMENT);

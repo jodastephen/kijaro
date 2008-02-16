@@ -893,6 +893,20 @@ public class Flow extends TreeScanner {
         nextadr = nextadrPrev;
     }
 
+    public void visitComprehension(JCComprehension tree) {          // LISTCOMP
+        scan(tree.var);
+        scan(tree.expr);
+
+        // Pretend that the variable has been assigned to. Otherwise
+        // the flow pass will think that we're using it in map
+        // and filter without assigning to it. That's because the
+        // flow pass happens before the lower (de-sugaring) pass.
+        inits.incl(tree.var.sym.adr);
+
+        scan(tree.map);
+        scan(tree.filter);
+    }
+
     public void visitLabelled(JCLabeledStatement tree) {
         ListBuffer<PendingExit> prevPendingExits = pendingExits;
         pendingExits = new ListBuffer<PendingExit>();

@@ -185,6 +185,14 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return r;
     }
 
+    public R visitComprehension(ComprehensionTree node, P p) {     // LISTCOMP
+        R r = scan(node.getVariable(), p);
+        r = scanAndReduce(node.getExpression(), p, r);
+        r = scanAndReduce(node.getMap(), p, r);
+        r = scanAndReduce(node.getFilter(), p, r);
+        return r;
+    }
+
     public R visitLabeledStatement(LabeledStatementTree node, P p) {
         return scan(node.getStatement(), p);
     }

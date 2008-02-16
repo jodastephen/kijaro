@@ -74,6 +74,7 @@ public interface TreeVisitor<R,P> {
     R visitErroneous(ErroneousTree node, P p);
     R visitExpressionStatement(ExpressionStatementTree node, P p);
     R visitEnhancedForLoop(EnhancedForLoopTree node, P p);
+    R visitComprehension(ComprehensionTree node, P p);          // LISTCOMP
     R visitForLoop(ForLoopTree node, P p);
     R visitIdentifier(IdentifierTree node, P p);
     R visitIf(IfTree node, P p);

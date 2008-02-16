@@ -121,6 +121,11 @@ public interface Tree {
         ENHANCED_FOR_LOOP(EnhancedForLoopTree.class),
 
         /**
+         * Used for instances of {@link ComprehensionTree}.
+         */
+        COMPREHENSION(ComprehensionTree.class),         // LISTCOMP
+
+        /**
          * Used for instances of {@link ExpressionStatementTree}.
          */
         EXPRESSION_STATEMENT(ExpressionStatementTree.class),
