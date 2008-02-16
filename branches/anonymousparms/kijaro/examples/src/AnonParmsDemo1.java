@@ -14,22 +14,22 @@ public class AnonParmsDemo1
     {
         /**
          * Partial anonymous signature
-         * 
+         *
          * @param 0 The <B>String</B> to search for
          * @param start The <B>int</B> offset to start from
          */
-        public boolean indexOf(String, int start);        
+        public boolean indexOf(String arg, int start);
     }
-    
+
     /**
      * We can use varargs without necessarily assigning a variable to it
-     * 
+     *
      * @param the command line arguments
      */
     public static void main(String...)
     {
         System.out.println("Static main method invoked with an anonymous args array");
-        
+
         // You are no longer required to deal with an exception object if you don't need it
         try
         {
@@ -38,29 +38,29 @@ public class AnonParmsDemo1
         }
         catch(FileNotFoundException)
         {
-            System.out.println("I got the message without having to deal with the exception object!");
+            System.out.println("I got the message of the missing file, without having to deal with the exception object!");
         }
-        
+
+		// Interface signature need no default parameter names
         try
         {
             new SomeContract()
             {
                 // I don't care what the contract says, I won't support this
-                // and thus I certainly see no need to make up identifiers
                 public boolean indexOf(String, int)
                 {
                     throw new UnsupportedOperationException();
                 }
             }.indexOf("CAFEBABE", 0);
         }
-        catch(UnsupportedOperationException ex)
+        catch(UnsupportedOperationException)
         {
             System.out.println("SomeContract is not supported!");
         }
     }
-    
 
-    
+
+
     /**
      * First required method of MouseMotionListener. This event we are interested in processing.
      *
