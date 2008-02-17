@@ -509,9 +509,9 @@ public class Name implements javax.lang.model.element.Name {
             hashCode = fromString("hashCode");
             compareTo = fromString("compareTo");
             getDeclaringClass = fromString("getDeclaringClass");
-            findField = fromString("findField");  // FCM-MREF
-            findConstructor = fromString("findConstructor");  // FCM-MREF
-            findMethod = fromString("findMethod");  // FCM-MREF
+            getDeclaredField = fromString("getDeclaredField");  // FCM-MREF
+            getDeclaredConstructor = fromString("getDeclaredConstructor");  // FCM-MREF
+            getDeclaredMethod = fromString("getDeclaredMethod");  // FCM-MREF
             ex = fromString("ex");
             finalize = fromString("finalize");
         }
@@ -646,9 +646,9 @@ public class Name implements javax.lang.model.element.Name {
         public final Name hashCode;
         public final Name compareTo;
         public final Name getDeclaringClass;
-        public final Name findField;  // FCM-MREF
-        public final Name findConstructor;  // FCM-MREF
-        public final Name findMethod;  // FCM-MREF
+        public final Name getDeclaredField;  // FCM-MREF
+        public final Name getDeclaredConstructor;  // FCM-MREF
+        public final Name getDeclaredMethod;  // FCM-MREF
         public final Name ex;
         public final Name finalize;
     }
