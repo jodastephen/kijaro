@@ -1,11 +1,8 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseListener;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 
 public class FCM {
 
@@ -92,10 +89,12 @@ public class FCM {
     }
 
     public void processLiterals() throws Exception {
-//        Method m = Dummy#fixed(String);  // succeeds = OK
+        Method m = Dummy#fixed(String);  // succeeds = OK
 //        Method m = Dummy#fixed(boolean);  // succeeds = OK
-        Method m = Dummy#fixed(String,boolean);  // succeeds = OK
+//        Method m = Dummy#fixed(String,boolean);  // succeeds = OK
 //        Method m = Dummy.Inner#inner(String);  // succeeds = OK
+//        Method m = Dummy#fixed(float);  // fails(doesnotexist) = OK
+//        Method m = dummy#shouting();  // fails(private) = OK
         
         // these fail as they are based on an instance, not a class
 //        Method m = new Dummy("Hi")#fixed(String,boolean);
@@ -111,13 +110,16 @@ public class FCM {
         System.out.println(m.getName());
         m.invoke(dummy, "Hello", true);
         
-        Field f = Dummy#message;  // succeeds = OK
+        Field f = dummy#message;  // fails = OK
+//        Field f = Dummy#message;  // succeeds = OK
         System.out.println(f.getName());
         System.out.println(f.get(dummy));
         
 //        Constructor c = Dummy#(String);  // succeeds = OK
-//        Constructor<?> c = Dummy#(String);  // succeeds = OK
-        Constructor<Dummy> c = Dummy#(String);  // succeeds = OK
+        Constructor<?> c = Dummy#(String);  // succeeds = OK
+//        Constructor<Dummy> c = Dummy#(float);  // fails(doesnotexist) = OK
+//        Constructor<Dummy> c = Dummy#();  // fails(private) = OK
+//        Constructor<Dummy> c = Dummy#(String);  // succeeds = OK
         System.out.println(c.getName());
         Dummy created = (Dummy) c.newInstance("great");
         created.shout("This is ");
@@ -131,36 +133,6 @@ public class FCM {
 //        Fn<String(int,Fn<void()>)> mt = null;
 //        Fn<int, Fn<return void> return String> mt = null;
 ////        Fn<int, Fn<=> void> => String> mt = null;
-    }
-
-    private static Field findField(Class<?> cls, String name) {
-        try {
-            return cls.getDeclaredField(name);
-        } catch (SecurityException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        } catch (NoSuchFieldException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        }
-    }
-
-    private static Constructor findConstructor(Class<?> cls, Class<?>... types) {
-        try {
-            return cls.getDeclaredConstructor(types);
-        } catch (SecurityException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        } catch (NoSuchMethodException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        }
-    }
-
-    private static Method findMethod(Class<?> cls, String name, Class<?>... types) {
-        try {
-            return cls.getDeclaredMethod(name, types);
-        } catch (SecurityException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        } catch (NoSuchMethodException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        }
     }
 
     public static void handleStaticAction(ActionEvent ev) {
