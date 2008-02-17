@@ -1,8 +1,5 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.util.Random;
 
 public class FCMDirect {
 
@@ -23,8 +20,10 @@ public class FCMDirect {
     }
 
     public void processDirect() {
+//        Field f = this#name;
+//        System.out.println(f);
 
-//    	Constructor<String> c = this#(String);
+//    	Constructor<FCMDirect> c = this#(String);
 //    	System.out.println(c);
 
 //        Method m = this#handleLocalAction(ActionEvent);
@@ -84,26 +83,6 @@ public class FCMDirect {
     public void registerAndCall(Object lnr) {
         System.out.println(lnr);
         System.out.println("XXX");
-    }
-
-    private static <T> Constructor<T> findConstructor(Class<T> cls, Class<?>... types) {
-        try {
-            return cls.getDeclaredConstructor(types);
-        } catch (SecurityException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        } catch (NoSuchMethodException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        }
-    }
-
-    private static Method findMethod(Class<?> cls, String name, Class<?>... types) {
-        try {
-            return cls.getDeclaredMethod(name, types);
-        } catch (SecurityException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        } catch (NoSuchMethodException ex) {
-            throw new NoSuchMethodError(ex.getMessage());
-        }
     }
 
     @Override

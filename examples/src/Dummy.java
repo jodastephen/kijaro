@@ -4,6 +4,13 @@ public class Dummy {
     public Dummy(String text) {
         this.text = text;
     }
+    private Dummy() {
+        this.text = null;
+    }
+
+    private void shouting() {
+        System.out.println("Message from shout: " + message + text);
+    }
 
     public void shout(String message) {
         System.out.println("Message from shout: " + message + text);
