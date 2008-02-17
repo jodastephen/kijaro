@@ -1174,6 +1174,21 @@ public class Resolve {
             pos, env.enclClass.sym.type, name, false);
     }
 
+    /** Resolve field.
+     *  @param pos       The position to use for error reporting.
+     *  @param env       The environment current at the constructor invocation.
+     *  @param site      The type of class for which a constructor is searched.
+     *  @param name      The identifier's name.
+     */
+    Symbol resolveField(DiagnosticPosition pos,
+                              Env<AttrContext> env,
+                              Type site,
+                              Name name) {
+        return access(
+            findField(env, site, name, site.tsym),
+            pos, site, name, true);
+    }
+
     /** Resolve an unqualified method identifier.
      *  @param pos       The position to use for error reporting.
      *  @param env       The environment current at the method invocation.
@@ -1551,7 +1566,7 @@ public class Resolve {
      *  Instances of this class indicate "Symbol not found".
      *  Instances of subclass indicate other errors.
      */
-    private class ResolveError extends Symbol {
+    class ResolveError extends Symbol {
 
         ResolveError(int kind, Symbol sym, String debugName) {
             super(kind, 0, null, null, null);

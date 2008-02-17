@@ -2451,10 +2451,9 @@ public class Attr extends JCTree.Visitor {
         Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
         
         // validate that field exists and is accessible
-        Symbol sym = rs.resolveInternalField(tree.pos(), env, site, tree.name);
+        rs.resolveField(tree.pos(), env, site, tree.name);
         
         // assign and check types
-        site = attribType(siteTarget, env);
         result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
         
         System.out.println("Attr.visitFieldReference (End)");
@@ -2472,10 +2471,15 @@ public class Attr extends JCTree.Visitor {
         List<Type> paramTypes = attribParamTypes(tree.types, env);
         
         // validate that constructor exists and is accessible
-        MethodSymbol sym = rs.resolveInternalConstructor(tree.pos(), env, site, paramTypes, null);
-        tree.convertFromMethodSymbol = sym;
-        MethodType crefType = sym.asConstructorMethodType();
-        result = check(tree, crefType, VAL, pkind, pt);
+        Symbol sym = rs.resolveConstructor(tree.pos(), env, site, paramTypes, null);
+        if (sym instanceof MethodSymbol) {
+            MethodSymbol msym = (MethodSymbol) sym;
+            tree.convertFromMethodSymbol = msym;
+            MethodType crefType = msym.asConstructorMethodType();
+            result = check(tree, crefType, VAL, pkind, pt);
+        } else {
+            result = check(tree, sym.type, VAL, pkind, pt);
+        }
         
         System.out.println("Attr.visitConstructorReference (End)");
     }
@@ -2492,8 +2496,10 @@ public class Attr extends JCTree.Visitor {
         List<Type> paramTypes = attribParamTypes(tree.types, env);
         
         // validate that method exists and is accessible
-        MethodSymbol sym = rs.resolveInternalMethod(tree.pos(), env, site, tree.name, paramTypes, null);
-        tree.convertFromMethodSymbol = sym;
+        Symbol sym = rs.resolveQualifiedMethod(tree.pos(), env, site, tree.name, paramTypes, null);
+        if (sym instanceof MethodSymbol) {
+            tree.convertFromMethodSymbol = (MethodSymbol) sym;
+        }
         result = check(tree, sym.type, VAL, pkind, pt);
         
         System.out.println("Attr.visitMethodReference (End)");
