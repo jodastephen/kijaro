@@ -3290,7 +3290,11 @@ public class Lower extends TreeTranslator {
     }
 
     // Find all identifiers that have a symbol with the same name as "newSym" and
-    // point explicitly to "newSym". Does nothing if "tree" is null.
+    // point explicitly to "newSym". Does nothing if "tree" is null. XXX I believe
+    // this is a bogus way to do this. The symbol could have been selected, like
+    // "foo.bar". You can't replace "bar" there. I could skip Select nodes, but
+    // there may be others. Perhaps there's a cleaner way to do this from the
+    // beginning.
     private void substituteSymbol(JCTree tree, final Symbol newSym) {           // LISTCOMP
         class SymbolSubstituter extends TreeScanner {
             public void visitIdent(JCIdent tree) {
