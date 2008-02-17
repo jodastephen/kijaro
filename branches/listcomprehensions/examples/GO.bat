@@ -1,6 +1,6 @@
 @ECHO OFF
 
-SET COMPILER_JAR=\kijaro\kijaro\langtools\dist\bootstrap\lib\javac.jar
+SET COMPILER_JAR=..\langtools\dist\bootstrap\lib\javac.jar
 SET COMPILER_FLAGS=-Xlint:unchecked -cp .
 
 DEL *.class
