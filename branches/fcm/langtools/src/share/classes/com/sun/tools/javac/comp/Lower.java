@@ -3107,22 +3107,20 @@ public class Lower extends TreeTranslator {
         make_at(tree.pos());
         
         // find the method that resolves the Field
-        Symbol findMethod = lookupMethod(tree.pos(),
-                names.findField,
-                currentClass.type,
-                List.of(syms.classType, syms.stringType));
+        Symbol reflectLookupSym = lookupMethod(tree.pos(),
+                names.getDeclaredField,
+                syms.classType,
+                List.<Type>of(syms.stringType));
         
         // build the arguments into a list
-        JCExpression fieldName = makeLit(syms.stringType, tree.name.toString());
-        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
-        List<JCExpression> args = List.of(classOf(siteTarget), fieldName);
+        JCExpression fieldNameTree = makeLit(syms.stringType, tree.name.toString());
+        List<JCExpression> argsTree = List.of(fieldNameTree);
         
-        // change the AST
-        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
-        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        
-        // return the updated AST
-        result = invokeFindNode;
+        // create the method call
+        Type targetType = (tree.target == null ? currentClass.type : tree.target.type);
+        JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
+        JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
+        result = invokeTree;
         
         System.out.println("Lower.visitFieldReference (End)");
     }
@@ -3143,27 +3141,26 @@ public class Lower extends TreeTranslator {
         make_at(tree.pos());
         
         // find the method that resolves the Constructor
-        Symbol findMethod = lookupMethod(tree.pos(),
-                   names.findConstructor,
-                   currentClass.type,
-                   List.of(syms.classType, new ArrayType(syms.classType, syms.arrayClass)));
+        ArrayType classArrayType = new ArrayType(syms.classType, syms.arrayClass);
+        Symbol reflectLookupSym = lookupMethod(tree.pos(),
+                   names.getDeclaredConstructor,
+                   syms.classType,
+                   List.<Type>of(classArrayType));
         
         // build the arguments into a list
         ListBuffer<JCExpression> elems = new ListBuffer<JCExpression>();
         for (JCExpression expr : tree.types) {
             elems.append(classOf(expr));
         }
-        JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
-        typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
-        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
-        List<JCExpression> args = List.of(classOf(siteTarget),  typesArray);
+        JCNewArray typesArrayTree = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
+        typesArrayTree.type = classArrayType;
+        List<JCExpression> argsTree = List.<JCExpression>of(typesArrayTree);
         
-        // change the AST
-        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
-        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        
-        // return the updated AST
-        result = invokeFindNode;
+        // create the method call
+        Type targetType = (tree.target == null ? currentClass.type : tree.target.type);
+        JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
+        JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
+        result = invokeTree;
         
         System.out.println("Lower.visitConstructorReference.makeConstructorLiteral (End)");
     }
@@ -3229,28 +3226,27 @@ public class Lower extends TreeTranslator {
         make_at(tree.pos());
         
         // find the method that resolves the Method
-        Symbol findMethod = lookupMethod(tree.pos(),
-                   names.findMethod,
-                   currentClass.type,
-                   List.of(syms.classType, syms.stringType, new ArrayType(syms.classType, syms.arrayClass)));
+        ArrayType classArrayType = new ArrayType(syms.classType, syms.arrayClass);
+        Symbol reflectLookupSym = lookupMethod(tree.pos(),
+                   names.getDeclaredMethod,
+                   syms.classType,
+                   List.<Type>of(syms.stringType, classArrayType));
         
         // build the arguments into a list
         ListBuffer<JCExpression> elems = new ListBuffer<JCExpression>();
         for (JCExpression expr : tree.types) {
             elems.append(classOf(expr));
         }
-        JCNewArray typesArray = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
-        typesArray.type = new ArrayType(syms.classType, syms.arrayClass);
+        JCNewArray typesArrayTree = make.NewArray(make.Type(syms.classType), List.<JCExpression>nil(), elems.toList());
+        typesArrayTree.type = classArrayType;
         JCExpression methodName = makeLit(syms.stringType, tree.name.toString());
-        JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
-        List<JCExpression> args = List.of(classOf(siteTarget), methodName, typesArray);
+        List<JCExpression> argsTree = List.of(methodName, typesArrayTree);
         
-        // change the AST
-        JCExpression selectFindNode = make.Select(make.Ident(currentClass.type.tsym), findMethod);
-        JCMethodInvocation invokeFindNode = make.App(selectFindNode, args);
-        
-        // return the updated AST
-        result = invokeFindNode;
+        // create the method call
+        Type targetType = (tree.target == null ? currentClass.type : tree.target.type);
+        JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
+        JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
+        result = invokeTree;
         
         System.out.println("Lower.visitMethodReference.makeMethodLiteral (End)");
     }
