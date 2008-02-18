@@ -24,6 +24,10 @@ public class FCMIM {
         };
         System.out.println("01:" + factory);
         System.out.println("02:" + factory.create("7"));
+//        Runnable r = #() {
+//            System.out.println("HI");
+//        };
+//        r.run();
     }
 
 //    public void processInnerMethod() throws Exception {
