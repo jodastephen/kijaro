@@ -437,7 +437,14 @@ public class Parser {
     /**
      * Ident = IDENTIFIER
      */
-    Name ident() {
+    Name ident() {  // FCM-MREF
+        return ident(false);
+    }
+
+    /**
+     * Ident = IDENTIFIER
+     */
+    Name ident(boolean optional) {  // FCM-MREF
         if (S.token() == IDENTIFIER) {
             Name name = S.name();
             S.nextToken();
@@ -464,6 +471,8 @@ public class Parser {
                 S.nextToken();
                 return name;
             }
+        } else if (optional) {
+            return null;
         } else {
             accept(IDENTIFIER);
             return names.error;
@@ -1079,25 +1088,34 @@ public class Parser {
             if (typeArgs != null) illegal();
             t = typeArgumentsOpt(t);
             break;
-        case HASH:  // FCM-MREF, FCM-MI
+        case HASH:  // FCM-MREF, FCM-IM
             if (typeArgs != null) {
                 return illegal();
             }
             mode = EXPR;
             S.nextToken();
             if (S.token() == LPAREN) {
-                List<JCVariableDecl> params = formalParameters();
-                // System.out.println("Params: " + params);
-                if (S.token() == LBRACE) {
+                List<JCTree> paramsOrTypes = formalParamsOrTypes();
+                if (paramsOrTypes.size() == 0) {
+                    if (S.token() == LBRACE) {
+                        // #() { ... };  - Inner method
+                        JCBlock body = block();
+                        t = toP(F.at(pos).InnerMethod(List.<JCVariableDecl>nil(), body));
+                    } else {
+                        // #(TypesOpt);  - Constructor reference
+                        t = toP(F.at(pos).ConstructorReference(null, List.<JCExpression>nil()));
+                    }
+                } else if (paramsOrTypes.head instanceof JCVariableDecl) {
                     // #() { ... };  - Inner method
                     JCBlock body = block();
+                    List<JCVariableDecl> params = List.convert(JCVariableDecl.class, paramsOrTypes);
                     t = toP(F.at(pos).InnerMethod(params, body));
-                } else {
+                } else if (paramsOrTypes.head instanceof JCExpression) {
                     // #(TypesOpt);  - Constructor reference
-                    // TODO: Convert JCVariableDecl to JCExpression (types), or error
-//                    List<JCExpression> types = types();
-                    List<JCExpression> types = List.<JCExpression>nil();
+                    List<JCExpression> types = List.convert(JCExpression.class, paramsOrTypes);
                     t = toP(F.at(pos).ConstructorReference(null, types));
+                } else {
+                    return illegal();  // should not happen
                 }
             } else if (S.token() == IDENTIFIER) {
                 Name name = ident();  // calls S.nextToken()
@@ -1109,6 +1127,10 @@ public class Parser {
                     List<JCExpression> types = types();
                     t = toP(F.at(pos).MethodReference(null, name, types));
                 }
+            } else if (S.token() == LBRACE) {
+                // # { ... };  - Inner method - shortcut with no params
+                JCBlock body = block();
+                t = toP(F.at(pos).InnerMethod(List.<JCVariableDecl>nil(), body));
             } else {
                 return illegal();
             }
@@ -1907,8 +1929,7 @@ public class Parser {
         accept(CATCH);
         accept(LPAREN);
         JCVariableDecl formal =
-            variableDeclaratorId(optFinal(Flags.PARAMETER),
-                                 qualident());
+            variableDeclaratorId(optFinal(Flags.PARAMETER), qualident(), false);  // FCM-MREF
         accept(RPAREN);
         JCBlock body = block();
         return F.at(pos).Catch(formal, body);
@@ -2226,9 +2247,9 @@ public class Parser {
 
     /** VariableDeclaratorId = Ident BracketsOpt
      */
-    JCVariableDecl variableDeclaratorId(JCModifiers mods, JCExpression type) {
+    JCVariableDecl variableDeclaratorId(JCModifiers mods, JCExpression type, boolean optIdent) {  // FCM-MREF
         int pos = S.pos();
-        Name name = ident();
+        Name name = ident(optIdent);
         if ((mods.flags & Flags.VARARGS) == 0)
             type = bracketsOpt(type);
         return toP(F.at(pos).VarDef(mods, name, type, null));
@@ -2769,6 +2790,34 @@ public class Parser {
         return toP(F.at(pos).TypeParameter(name, bounds.toList()));
     }
 
+    /**
+     * Either formal parameters or types.
+     * Returns either a JCVariableDecl list, a JCExpression list or an empty list.
+     */
+    List<JCTree> formalParamsOrTypes() {  // FCM-MREF
+        ListBuffer<JCTree> result = new ListBuffer<JCTree>();
+        JCVariableDecl lastParam = null;
+        accept(LPAREN);
+        if (S.token() != RPAREN) {
+            lastParam = formalParameter(true);
+            if (lastParam.name == null) {
+                result.append(lastParam.vartype);
+                while ((lastParam.mods.flags & Flags.VARARGS) == 0 && S.token() == COMMA) {
+                    S.nextToken();
+                    result.append(type());
+                }
+            } else {
+                result.append(lastParam);
+                while ((lastParam.mods.flags & Flags.VARARGS) == 0 && S.token() == COMMA) {
+                    S.nextToken();
+                    result.append(lastParam = formalParameter(false));
+                }
+            }
+        }
+        accept(RPAREN);
+        return result.toList();
+    }
+
     /** FormalParameters = "(" [ FormalParameterList ] ")"
      *  FormalParameterList = [ FormalParameterListNovarargs , ] LastFormalParameter
      *  FormalParameterListNovarargs = [ FormalParameterListNovarargs , ] FormalParameter
@@ -2778,10 +2827,10 @@ public class Parser {
         JCVariableDecl lastParam = null;
         accept(LPAREN);
         if (S.token() != RPAREN) {
-            params.append(lastParam = formalParameter());
+            params.append(lastParam = formalParameter(false));  // FCM-MREF
             while ((lastParam.mods.flags & Flags.VARARGS) == 0 && S.token() == COMMA) {
                 S.nextToken();
-                params.append(lastParam = formalParameter());
+                params.append(lastParam = formalParameter(false));  // FCM-MREF
             }
         }
         accept(RPAREN);
@@ -2798,8 +2847,17 @@ public class Parser {
     /** FormalParameter = { FINAL | '@' Annotation } Type VariableDeclaratorId
      *  LastFormalParameter = { FINAL | '@' Annotation } Type '...' Ident | FormalParameter
      */
-    JCVariableDecl formalParameter() {
+    JCVariableDecl formalParameter(boolean optIdent) {  // FCM-MREF
         JCModifiers mods = optFinal(Flags.PARAMETER);
+        
+        // if a modifier was found, then identifier cannot be optional
+        if (optIdent &&
+                (mods.flags & (Flags.FINAL | Flags.DEPRECATED)) > 0 ||
+                mods.annotations.size() > 0) {
+            optIdent = false;
+        }
+        
+        // parse type
         JCExpression type = type();
         if (S.token() == ELLIPSIS) {
             checkVarargs();
@@ -2807,7 +2865,9 @@ public class Parser {
             type = to(F.at(S.pos()).TypeArray(type));
             S.nextToken();
         }
-        return variableDeclaratorId(mods, type);
+        
+        // parse identifier
+        return variableDeclaratorId(mods, type, optIdent);
     }
 
 /* ---------- auxiliary methods -------------- */
