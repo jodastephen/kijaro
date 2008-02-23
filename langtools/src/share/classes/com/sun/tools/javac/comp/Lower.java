@@ -3394,9 +3394,8 @@ public class Lower extends TreeTranslator {
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
         MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
         smiSym.name = convertTo.name;
-        smiSym.asType().restype = convertTo.asType().restype;
-        smiSym.erasure_field = null;
-        smiSym.erasure_field = smiSym.erasure(types);
+        clsDef.sym.members().enter(smiSym);
+        JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), tree.body);
         
         // adjust the scope of this. and super. expressions so that we can reuse the
         // inner class code that provides access methods
@@ -3410,10 +3409,46 @@ public class Lower extends TreeTranslator {
                 }
             }
         }
-        tree.body = new ScopeAdjustor().translate(tree.body);
+        smiDef.body = new ScopeAdjustor().translate(smiDef.body);
         
-        JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), tree.body);
-        clsDef.sym.members().enter(smiSym);
+        // adjust the input parameters if we have implemented a generified method
+        // we need to cast from the erased type to the implemented type
+        class GenericsAdjustor extends TreeTranslator {
+            final Symbol search;
+            final Type castFrom;
+            GenericsAdjustor(Symbol search, Type castFrom) {
+                this.search = search;
+                this.castFrom = castFrom;
+            }
+            public void visitIdent(JCIdent tree) {
+                if (tree.sym == search) {
+                    result = make.at(tree.pos()).TypeCast(tree.type, tree);
+                    tree.type = castFrom;
+                } else {
+                    result = tree;
+                }
+            }
+        }
+        Iterator<JCVariableDecl> params = smiDef.params.iterator();
+        Iterator<Type> argtypes = convertTo.asType().argtypes.iterator();
+        while (params.hasNext() && argtypes.hasNext()) {
+            JCVariableDecl param = params.next();
+            Type argtype = types.erasure(argtypes.next());
+            if (types.isSameType(param.type, argtype) == false) {
+                smiDef.body = new GenericsAdjustor(param.sym, argtype).translate(smiDef.body);
+                param.sym.type = argtype;
+                param.type = argtype;
+                param.vartype = make.Type(argtype);
+            }
+        }
+        
+        // change method signature that we have implemented to the erased form
+        smiSym.asType().argtypes = types.erasure(convertTo.asType().argtypes);
+        smiSym.asType().restype = types.erasure(convertTo.asType().restype);
+        smiDef.restype = make.Type(smiSym.asType().restype);  // return type will be boxed by setting this
+        smiSym.erasure_field = null;
+        smiSym.erasure_field = smiSym.erasure(types);
+        
         clsDef.defs = clsDef.defs.append(smiDef);
     }
 
