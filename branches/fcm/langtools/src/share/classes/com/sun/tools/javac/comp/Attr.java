@@ -2539,32 +2539,40 @@ public class Attr extends JCTree.Visitor {
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
         System.out.println("Attr.visitInnerMethod (Start)");
         
-        // setup scope for new method
+        // setup scope for new method - taken from MemberEnter
         Env<AttrContext> localEnv = env.dup(tree, env.info.dup(env.info.scope.dupUnshared()));
         MethodType mtype = new MethodType(List.<Type>nil(), null, List.<Type>nil(), null);
         MethodSymbol msym = new MethodSymbol(Flags.PUBLIC, names._innermethod, mtype, env.info.scope.owner);
         JCMethodDecl imMethod1 = make.MethodDef(msym, tree.body);
+        imMethod1.params = tree.params;
         localEnv.enclMethod = imMethod1;
         localEnv.info.scope.owner = imMethod1.sym;
+        mtype = (MethodType) memberEnter.signature(List.<JCTypeParameter>nil(),
+                tree.params, make.Type(syms.objectType), List.<JCExpression>nil(), localEnv);
+        mtype.restype = null;  // reset back from void
+        mtype.innerMethod = true;  // mark as inner method for later processing
+        msym.type = mtype;  // replace fake method type with real one
+        
+        // Set params and names, marking as varargs if necessary
+        ListBuffer<VarSymbol> params = new ListBuffer<VarSymbol>();
+        ListBuffer<Name> paramNames = new ListBuffer<Name>();
+        JCVariableDecl lastParam = null;
+        for (List<JCVariableDecl> l = tree.params; l.nonEmpty(); l = l.tail) {
+            JCVariableDecl param = lastParam = l.head;
+            assert param.sym != null;
+            params.append(param.sym);
+            paramNames.append(param.name);
+        }
+        msym.params = params.toList();
+        msym.savedParameterNames = paramNames.toList();
+        if (lastParam != null && (lastParam.mods.flags & Flags.VARARGS) != 0) {
+            msym.flags_field |= Flags.VARARGS;
+        }
         
         // attribute the parameters, which are added to the scope
-        ListBuffer<Type> imParamTypes = new ListBuffer<Type>();
-        ListBuffer<VarSymbol> imParamSyms = new ListBuffer<VarSymbol>();
-        ListBuffer<Name> imParamNames = new ListBuffer<Name>();
-        ListBuffer<JCVariableDecl> paramClones = new ListBuffer<JCVariableDecl>();
         for (List<JCVariableDecl> l = tree.params; l.nonEmpty(); l = l.tail) {
-            imParamTypes.append(attribStat(l.head, localEnv));
-            imParamSyms.append(l.head.sym);
-            imParamNames.append(l.head.name);
-            JCVariableDecl paramClone = (JCVariableDecl) l.head.clone();
-            paramClone.sym.owner = msym;
-            paramClones.append(paramClone);
+            attribStat(l.head, localEnv);
         }
-        mtype.argtypes = imParamTypes.toList();
-        mtype.innerMethod = true;
-        msym.params = imParamSyms.toList();
-        msym.savedParameterNames = imParamNames.toList();
-        imMethod1.params = tree.params;
         
         // attribute the body
         attribStat(tree.body, localEnv);
