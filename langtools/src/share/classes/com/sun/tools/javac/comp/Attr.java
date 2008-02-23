@@ -2543,15 +2543,22 @@ public class Attr extends JCTree.Visitor {
         Env<AttrContext> localEnv = env.dup(tree, env.info.dup(env.info.scope.dupUnshared()));
         MethodType mtype = new MethodType(List.<Type>nil(), null, List.<Type>nil(), null);
         MethodSymbol msym = new MethodSymbol(Flags.PUBLIC, names._innermethod, mtype, env.info.scope.owner);
-        JCMethodDecl imMethod1 = make.MethodDef(msym, tree.body);
-        imMethod1.params = tree.params;
-        localEnv.enclMethod = imMethod1;
-        localEnv.info.scope.owner = imMethod1.sym;
+        JCMethodDecl mtree = make.MethodDef(msym, tree.body);
+        mtree.params = tree.params;
+        localEnv.enclMethod = mtree;
+        localEnv.info.scope.owner = mtree.sym;
         mtype = (MethodType) memberEnter.signature(List.<JCTypeParameter>nil(),
                 tree.params, make.Type(syms.objectType), List.<JCExpression>nil(), localEnv);
         mtype.restype = null;  // reset back from void
         mtype.innerMethod = true;  // mark as inner method for later processing
         msym.type = mtype;  // replace fake method type with real one
+        mtree.type = mtype;  // replace fake method type with real one
+        
+        // store
+        tree.convertFromMethodSymbol = msym;
+//        tree.method = mtree;
+//        tree.params = null;
+//        tree.body = null;
         
         // Set params and names, marking as varargs if necessary
         ListBuffer<VarSymbol> params = new ListBuffer<VarSymbol>();
@@ -2574,16 +2581,19 @@ public class Attr extends JCTree.Visitor {
             attribStat(l.head, localEnv);
         }
         
-        // attribute the body
+        // attribute the body, which calculates the return type
         attribStat(tree.body, localEnv);
         if (mtype.restype == null) {  // will happen if no return statement found
             mtype.restype = syms.voidType;
         }
+        if (mtype.restype.tag <= VOID) {
+            mtree.restype = make.TypeIdent(mtype.restype.tag).setType(mtype.restype);
+        } else {
+            mtree.restype = make.Ident(mtype.restype.tsym);
+        }
         
         // leave the scope
         localEnv.info.scope.leave();
-        
-        tree.convertFromMethodSymbol = msym;
         
         result = check(tree, mtype, VAL, pkind, pt);
         
