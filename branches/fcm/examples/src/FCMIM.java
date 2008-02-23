@@ -19,7 +19,7 @@ public class FCMIM {
     public void processInnerMethod() throws Exception {
         StringIntegerFactory factory = #(String str) {
             if (str == null) {
-                return Integer.valueOf(0);
+                return 0;
             }
             System.out.println("IM:" + this);
             return new Integer(str);
