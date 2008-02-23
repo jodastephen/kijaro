@@ -3205,7 +3205,7 @@ public class Lower extends TreeTranslator {
         
         List<JCExpression> refParams = make.Idents(smiDef.params);
         
-        Type createType = convertTo.getReturnType();
+        Type createType = tree.target.type;
         JCNewClass callExp = make.NewClass(null, null, make.QualIdent(createType.tsym), refParams, null);
         callExp.constructor = tree.convertFromMethodSymbol;
         callExp.type = createType;
