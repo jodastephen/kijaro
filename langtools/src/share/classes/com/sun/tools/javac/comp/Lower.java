@@ -3272,20 +3272,27 @@ public class Lower extends TreeTranslator {
         
         // create constructor and methods
         String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
-        addFcmConstructor(tree, clsDef);
-        addFcmSmiMethodReference(tree, clsDef);
-        addFcmToString(tree, clsDef, str);
         
         // convert method reference to new instance of anonymous class
-        JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>nil());
-        
-        // return the updated AST
-        result = translate(newClass);
+        if (tree.isStaticReference()) {
+            addFcmConstructor(tree, clsDef);
+            addFcmSmiMethodReference(tree, null, clsDef);
+            addFcmToString(tree, clsDef, str);
+            JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>nil());
+            result = translate(newClass);
+        } else {
+            tree.target = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
+            VarSymbol targetVarSym = addFcmSmiMethodConstructor(tree, clsDef);
+            addFcmSmiMethodReference(tree, targetVarSym, clsDef);
+            addFcmToString(tree, clsDef, str);
+            JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>of(tree.target));
+            result = translate(newClass);
+        }
         
         System.out.println("Lower.visitMethodReference.makeMethodReference (End)");
     }
 
-    private void addFcmSmiMethodReference(JCMethodReference tree, JCClassDecl clsDef) {
+    private void addFcmSmiMethodReference(JCMethodReference tree, VarSymbol targetVarSym, JCClassDecl clsDef) {
         MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
         MethodSymbol smiSym = convertTo.clone(clsDef.sym);
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
@@ -3297,21 +3304,7 @@ public class Lower extends TreeTranslator {
         if (tree.isStaticReference()) {
             callExp = make.QualIdent(tree.convertFromMethodSymbol);
         } else {
-            JCExpression siteTarget = (tree.target == null ? makeThis(tree.pos(), currentClass) : tree.target);
-            callExp = make.Select(siteTarget, tree.convertFromMethodSymbol);
-            // adjust the scope of this. and super. expressions so that we can reuse the
-            // inner class code that provides access methods
-            // (qualify with the class name to ClassName.this. and ClassName.super.)
-            class ScopeAdjustor extends TreeTranslator {
-                public void visitIdent(JCIdent tree) {
-                    if (tree.name == names._this || tree.name == names._super) {
-                        result = make.at(tree.pos()).Select(make.Ident(currentClass), tree.name);
-                    } else {
-                        result = tree;
-                    }
-                }
-            }
-            callExp = new ScopeAdjustor().translate(callExp);
+            callExp = make.Select(make.Ident(targetVarSym), tree.convertFromMethodSymbol);
         }
         JCMethodInvocation callRef = make.App(callExp, refParams);
         JCStatement callRefStatement = make.Call(callRef);
@@ -3319,6 +3312,39 @@ public class Lower extends TreeTranslator {
         
         clsDef.sym.members().enter(smiSym);
         clsDef.defs = clsDef.defs.append(smiDef);
+    }
+
+    private VarSymbol addFcmSmiMethodConstructor(JCMethodReference tree, JCClassDecl clsDef) {
+        // create the target instance variable
+        VarSymbol varSym = new VarSymbol(Flags.PRIVATE & Flags.FINAL, names.target, tree.target.type, clsDef.sym);
+        JCVariableDecl varDef = make.VarDef(varSym, null);
+        clsDef.sym.members().enter(varSym);
+        clsDef.defs = clsDef.defs.append(varDef);
+        
+        // create the constructor
+        MethodType conType = new MethodType(List.<Type>of(tree.target.type), syms.voidType, List.<Type>nil(), clsDef.sym);
+        MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, clsDef.sym);
+        JCBlock conBody = make.Block(0L, List.<JCStatement>nil());
+        JCMethodDecl conDef = make.MethodDef(conSym, conBody);
+        clsDef.sym.members().enter(conSym);
+        clsDef.defs = clsDef.defs.append(conDef);
+        
+        // call super
+        JCIdent zuper = make.Ident(names._super);
+        zuper.type = syms.objectType;
+        zuper.sym = lookupConstructor(tree.pos(), syms.objectType, List.<Type>nil());
+        JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(), zuper, List.<JCExpression>nil());
+        callSuper.setType(syms.voidType);
+        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+        conDef.body.stats = conBody.stats.append(callSuperStatement);
+        
+        // assign to the variable
+        JCAssign assign = make.Assign(make.Ident(varSym), make.Ident(conDef.params.head.sym));
+        JCExpressionStatement assignStat = make.Exec(assign);
+        assign.type = tree.target.type;
+        conDef.body.stats = conBody.stats.append(assignStat);
+        
+        return varSym;
     }
 
     private JCClassDecl makeFcmAnonymousInnerClass(long flags, Type ifaceType) {
