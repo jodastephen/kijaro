@@ -439,20 +439,20 @@ public class TransTypes extends TreeTranslator {
         result = tree;
     }
 
-    JCMethodDecl currentMethod = null;
+    Type currentMethodReturnType = null;  // FCM-IM
     public void visitMethodDef(JCMethodDecl tree) {
-        JCMethodDecl previousMethod = currentMethod;
+        Type previousMethodReturnType = currentMethodReturnType;
         try {
-            currentMethod = tree;
+            currentMethodReturnType = tree.sym.erasure(types).getReturnType();
             tree.restype = translate(tree.restype, null);
             tree.typarams = List.nil();
             tree.params = translateVarDefs(tree.params);
             tree.thrown = translate(tree.thrown, null);
-            tree.body = translate(tree.body, tree.sym.erasure(types).getReturnType());
+            tree.body = translate(tree.body, currentMethodReturnType);
             tree.type = erasure(tree.type);
             result = tree;
         } finally {
-            currentMethod = previousMethod;
+            currentMethodReturnType = previousMethodReturnType;
         }
 
         // Check that we do not introduce a name clash by erasing types.
@@ -550,7 +550,7 @@ public class TransTypes extends TreeTranslator {
     }
 
     public void visitReturn(JCReturn tree) {
-        tree.expr = translate(tree.expr, currentMethod.sym.erasure(types).getReturnType());
+        tree.expr = translate(tree.expr, currentMethodReturnType);
         result = tree;
     }
 
@@ -740,10 +740,15 @@ public class TransTypes extends TreeTranslator {
 
     @Override
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
-        tree.params = translateVarDefs(tree.params);
-        tree.body = translate(tree.body, tree.convertToMethodSymbol.erasure(types).getReturnType());
-        tree.def = translate(tree.def);
-        result = tree;
+        Type previousMethodReturnType = currentMethodReturnType;
+        try {
+            currentMethodReturnType = tree.convertFromMethodSymbol.erasure(types).getReturnType();
+            tree.params = translateVarDefs(tree.params);
+            tree.body = translate(tree.body, currentMethodReturnType);
+            result = tree;
+        } finally {
+            currentMethodReturnType = previousMethodReturnType;
+        }
     }
 
     public void visitTypeArray(JCArrayTypeTree tree) {

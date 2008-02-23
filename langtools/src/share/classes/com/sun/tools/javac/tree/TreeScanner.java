@@ -271,7 +271,6 @@ public class TreeScanner extends Visitor {
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
         scan(tree.params);
         scan(tree.body);
-        scan(tree.def);
     }
 
     public void visitIdent(JCIdent tree) {

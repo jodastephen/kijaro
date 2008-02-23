@@ -318,9 +318,7 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         JCInnerMethod t = (JCInnerMethod) node;
         List<JCVariableDecl> params = copy(t.params, p);
         JCBlock body = copy(t.body, p);
-        JCNewClass def = copy(t.def, p);
         JCInnerMethod im = M.at(t.pos).InnerMethod(params, body);
-        im.def = def;
         return im;
     }
 

@@ -741,6 +741,69 @@ public class Flow extends TreeScanner {
         }
     }
 
+    public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
+        
+        JCClassDecl classDefPrev = classDef;
+        List<Type> thrownPrev = thrown;
+        boolean alivePrev = alive;
+        ListBuffer<PendingExit> pendingExitsPrev = pendingExits;
+
+        List<Type> caughtPrev = caught;
+        List<Type> mthrown = tree.convertFromMethodSymbol.type.getThrownTypes();
+        Bits initsPrev = inits.dup();
+        Bits uninitsPrev = uninits.dup();
+        int nextadrPrev = nextadr;
+        int firstadrPrev = firstadr;
+        Lint lintPrev = lint;
+
+        lint = lint.augment(tree.convertFromMethodSymbol.attributes_field);
+
+        pendingExits = new ListBuffer<PendingExit>();
+        thrown = List.nil();
+
+        try {
+            for (List<JCVariableDecl> l = tree.params; l.nonEmpty(); l = l.tail) {
+                JCVariableDecl def = l.head;
+                scan(def);
+                inits.incl(def.sym.adr);
+                uninits.excl(def.sym.adr);
+            }
+            if ((tree.convertFromMethodSymbol.flags() & (BLOCK | STATIC)) != BLOCK)
+                caught = mthrown;
+
+            alive = true;
+            scanStat(tree.body);
+
+            if (alive && tree.convertFromMethodSymbol.type.getReturnType().tag != VOID)
+                log.error(TreeInfo.diagEndPos(tree.body), "missing.ret.stmt");
+
+            List<PendingExit> exits = pendingExits.toList();
+            pendingExits = new ListBuffer<PendingExit>();
+            while (exits.nonEmpty()) {
+                PendingExit exit = exits.head;
+                exits = exits.tail;
+                if (exit.thrown == null) {
+                    assert exit.tree.getTag() == JCTree.RETURN;
+                } else {
+                    // uncaught throws will be reported later
+                    pendingExits.append(exit);
+                }
+            }
+        } finally {
+            classDef = classDefPrev;
+            thrown = thrownPrev;
+            alive = alivePrev;
+            pendingExits = pendingExitsPrev;
+            
+            inits = initsPrev;
+            uninits = uninitsPrev;
+            nextadr = nextadrPrev;
+            firstadr = firstadrPrev;
+            caught = caughtPrev;
+            lint = lintPrev;
+        }
+    }
+
     public void visitVarDef(JCVariableDecl tree) {
         boolean track = trackable(tree.sym);
         if (track && tree.sym.owner.kind == MTH) newVar(tree.sym);

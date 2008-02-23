@@ -14,17 +14,20 @@ public class FCMIM {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        
     }
 
     public void processInnerMethod() throws Exception {
         StringIntegerFactory factory = #(String str) {
+            if (str == null) {
+                return Integer.valueOf(0);
+            }
             System.out.println("IM:" + this);
-            return Integer.parseInt(str);
+            return new Integer(str);
         };
         System.out.println("01:" + factory);
         System.out.println("02:" + factory.create("7"));
-//        Runnable r = #() {
+        System.out.println("02:" + factory.create(null));
+//        Runnable r = # {
 //            System.out.println("HI");
 //        };
 //        r.run();

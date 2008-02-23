@@ -789,6 +789,7 @@ public class Type implements PrimitiveType {
         public Type restype;
         public List<Type> thrown;
         public boolean constructor;  // FCM-MREF
+        public boolean innerMethod;  // FCM-IM
 
         public MethodType(List<Type> argtypes,
                           Type restype,
