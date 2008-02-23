@@ -2829,6 +2829,16 @@ public class Types {
      * Capture conversion as specified by JLS 3rd Ed.
      */
     public Type capture(Type t) {
+//        if (t instanceof MethodType) {
+//            MethodType mt = (MethodType) t;
+//            ListBuffer<Type> captured = new ListBuffer<Type>();
+//            for (Type argType : mt.argtypes) {
+//                captured.append(capture(argType));
+//            }
+//            mt.argtypes = captured.toList();
+//            mt.restype = capture(mt.restype);
+//            return mt;
+//        }
         if (t.tag != CLASS)
             return t;
         ClassType cls = (ClassType)t;
