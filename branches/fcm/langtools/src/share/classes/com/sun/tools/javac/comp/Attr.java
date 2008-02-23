@@ -2568,6 +2568,9 @@ public class Attr extends JCTree.Visitor {
         
         // attribute the body
         attribStat(tree.body, localEnv);
+        if (mtype.restype == null) {  // will happen if no return statement found
+            mtype.restype = syms.voidType;
+        }
         
         // leave the scope
         localEnv.info.scope.leave();
