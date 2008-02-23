@@ -513,6 +513,7 @@ public class Name implements javax.lang.model.element.Name {
             getDeclaredField = fromString("getDeclaredField");  // FCM-MREF
             getDeclaredConstructor = fromString("getDeclaredConstructor");  // FCM-MREF
             getDeclaredMethod = fromString("getDeclaredMethod");  // FCM-MREF
+            target = fromString("target");  // FCM-MREF
             ex = fromString("ex");
             finalize = fromString("finalize");
         }
@@ -651,6 +652,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name getDeclaredField;  // FCM-MREF
         public final Name getDeclaredConstructor;  // FCM-MREF
         public final Name getDeclaredMethod;  // FCM-MREF
+        public final Name target;  // FCM-MREF
         public final Name ex;
         public final Name finalize;
     }
