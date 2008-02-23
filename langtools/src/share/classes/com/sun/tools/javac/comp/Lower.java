@@ -3314,7 +3314,6 @@ public class Lower extends TreeTranslator {
             callExp = new ScopeAdjustor().translate(callExp);
         }
         JCMethodInvocation callRef = make.App(callExp, refParams);
-        callRef.setType(convertTo.getReturnType());
         JCStatement callRefStatement = make.Call(callRef);
         smiBody.stats = smiBody.stats.append(callRefStatement);
         
