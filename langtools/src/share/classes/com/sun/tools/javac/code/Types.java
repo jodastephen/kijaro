@@ -277,11 +277,13 @@ public class Types {
 	                return isConvertible(t, smiSym.type, warn);
 	            } else {
 	            	MethodType mthType = (MethodType) t;
-	            	if (mthType.constructor) {
+	            	if (mthType.constructor) {  // constructor literal?
                     	ClassType typedConstructor = new ClassType(Type.noType, List.of(mthType.restype), syms.reflectConstructorType.asElement());
 	            		return isAssignable(typedConstructor, s);
-	            	} else {
-	            		return isSameType(syms.reflectMethodType, s);
+	            	} else if (mthType.innerMethod) {  // inner method not allowed as literal
+                        return false;
+	            	} else {  // method literal?
+                        return isAssignable(syms.reflectMethodType, s);
 	            	}
 	            }
         	} else if (s instanceof MethodType) {
