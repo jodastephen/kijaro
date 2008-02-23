@@ -274,9 +274,7 @@ public class Types {
         	if (s instanceof ClassType) {
 	            MethodSymbol smiSym = singleMethodInterfaceMethodSymbol(s);
 	            if (smiSym != null) {
-	                if (isSameType(t, smiSym.type)) {
-	                    return true;
-	                }
+	                return isConvertible(t, smiSym.type, warn);
 	            } else {
 	            	MethodType mthType = (MethodType) t;
 	            	if (mthType.constructor) {
@@ -286,6 +284,13 @@ public class Types {
 	            		return isSameType(syms.reflectMethodType, s);
 	            	}
 	            }
+        	} else if (s instanceof MethodType) {
+        	    if (isSameType(t, s)) {
+        	        return true;
+        	    }
+                MethodType tmt = (MethodType) t;
+                MethodType smt = (MethodType) s;
+                return isConvertible(tmt.getReturnType(), smt.getReturnType(), warn);
         	}
             return false;
         }
