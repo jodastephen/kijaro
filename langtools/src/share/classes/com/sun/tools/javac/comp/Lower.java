@@ -3394,6 +3394,9 @@ public class Lower extends TreeTranslator {
         smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
         MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
         smiSym.name = convertTo.name;
+        smiSym.asType().restype = convertTo.asType().restype;
+        smiSym.erasure_field = null;
+        smiSym.erasure_field = smiSym.erasure(types);
         
         // adjust the scope of this. and super. expressions so that we can reuse the
         // inner class code that provides access methods
