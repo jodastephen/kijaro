@@ -1942,6 +1942,12 @@ public class Lower extends TreeTranslator {
     		// type must be set from parent before children are evaluated
     		tree.type = type;
         }
+        if (tree instanceof JCInnerMethod) {  // FCM-IM
+            // replace method reference MethodType with actual type
+            assert (type instanceof ClassType);
+            // type must be set from parent before children are evaluated
+            tree.type = type;
+        }
         return (tree == null) ? null : boxIfNeeded(translate(tree), type);
     }
 
@@ -3360,10 +3366,52 @@ public class Lower extends TreeTranslator {
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
         System.out.println("Lower.visitInnerMethod (Start)");
         
-        // replace node by NewClass created in Attr
-        result = translate(tree.def);
+        // start process of changing the AST
+        make_at(tree.pos());
+        
+        // create class
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(FINAL | SYNTHETIC, tree.type);
+        
+        // create constructor and methods
+        String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
+        addFcmConstructor(tree, clsDef);
+        addFcmSmiInnerMethod(tree, clsDef);
+        addFcmToString(tree, clsDef, str);
+        
+        // convert method reference to new instance of anonymous class
+        JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>nil());
+        
+        // return the updated AST
+        result = translate(newClass);
         
         System.out.println("Lower.visitInnerMethod (End)");
+    }
+
+    private void addFcmSmiInnerMethod(JCInnerMethod tree, JCClassDecl clsDef) {
+        MethodSymbol smiSym = tree.convertFromMethodSymbol;
+        smiSym.owner = clsDef.sym;
+        smiSym.flags_field = smiSym.flags_field & PUBLIC;
+        smiSym.flags_field = smiSym.flags_field & ~ABSTRACT;
+        MethodSymbol convertTo = types.singleMethodInterfaceMethodSymbol(tree.type);
+        smiSym.name = convertTo.name;
+        
+        // adjust the scope of this. and super. expressions so that we can reuse the
+        // inner class code that provides access methods
+        // (qualify with the class name to ClassName.this. and ClassName.super.)
+        class ScopeAdjustor extends TreeTranslator {
+            public void visitIdent(JCIdent tree) {
+                if (tree.name == names._this || tree.name == names._super) {
+                    result = make.at(tree.pos()).Select(make.Ident(currentClass), tree.name);
+                } else {
+                    result = tree;
+                }
+            }
+        }
+        tree.body = new ScopeAdjustor().translate(tree.body);
+        
+        JCMethodDecl smiDef = make.MethodDef(smiSym, smiSym.asType(), tree.body);
+        clsDef.sym.members().enter(smiSym);
+        clsDef.defs = clsDef.defs.append(smiDef);
     }
 
     public void visitLetExpr(LetExpr tree) {

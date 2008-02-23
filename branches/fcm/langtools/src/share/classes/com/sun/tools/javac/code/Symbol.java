@@ -1014,6 +1014,11 @@ public abstract class Symbol implements Element {
             return m;
         }
 
+        @Override
+        public MethodType asType() {  // FCM-IM
+            return (MethodType) super.asType();
+        }
+
         /** The Java source which this symbol represents.
          */
         public String toString() {

@@ -189,6 +189,11 @@ public class Check {
         return syms.errType;
     }
 
+    Type typeError(DiagnosticPosition pos, Object problem, Type found, MethodType reqMT, Type req) {  // FCM-MREF
+        log.error(pos, "prob.found.req.2", problem, found, reqMT, req);
+        return syms.errType;
+    }
+
     Type typeError(DiagnosticPosition pos, String problem, Type found, Type req, Object explanation) {
         log.error(pos, "prob.found.req.1", problem, found, req, explanation);
         return syms.errType;
@@ -348,16 +353,16 @@ public class Check {
             log.error(pos, "assignment.to.extends-bound", req);
             return syms.errType;
         }
-        if (found instanceof MethodType) {
+        if (found instanceof MethodType) {  // FCM-MREF
             MethodSymbol smiMethod = types.singleMethodInterfaceMethodSymbol(req);
+            MethodType foundMType = (MethodType) found;
+            String err = foundMType.constructor ? "cref" : foundMType.innerMethod ? "im" : "mref";
             if (smiMethod != null) {
                 // smi, but method type does not match
-                String err = ((MethodType) found).constructor ? "incompatible.types.smi.cref" : "incompatible.types.smi.mref";
-                return typeError(pos, JCDiagnostic.fragment(err), found, req);
+                return typeError(pos, JCDiagnostic.fragment("incompatible.types.smi." + err), found, smiMethod.asType(), req);
             } else if (req.isInterface()) {
                 // interface, but not smi - provide separate error message
-                String err = ((MethodType) found).constructor ? "incompatible.types.non.smi.cref" : "incompatible.types.non.smi.mref";
-                return typeError(pos, JCDiagnostic.fragment(err), found, req);
+                return typeError(pos, JCDiagnostic.fragment("incompatible.types.non.smi." + err), found, req);
             }
         }
         return typeError(pos, JCDiagnostic.fragment("incompatible.types"), found, req);

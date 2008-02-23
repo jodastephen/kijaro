@@ -500,7 +500,6 @@ implements CRTFlags {
         public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
             SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
             sr.mergeWith(csp(tree.body));
-            sr.mergeWith(csp(tree.def));
             result = sr;
         }
 

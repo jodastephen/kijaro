@@ -1801,9 +1801,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         // FCM-IM
         public List<JCVariableDecl> params;
         public JCBlock body;
-        public ClassType convertToClassType;
-        public MethodSymbol convertToMethodSymbol;
-        public JCNewClass def;
+        public MethodSymbol convertFromMethodSymbol;
         protected JCInnerMethod(
                 List<JCVariableDecl> params,
                 JCBlock body) {

@@ -427,6 +427,7 @@ public class Name implements javax.lang.model.element.Name {
             semicolon = fromString(";");
             asterisk = fromString("*");
             _this = fromString("this");
+            _innermethod = fromString("#");  // FCM-IM
             _super = fromString("super");
             _default = fromString("default");
 
@@ -562,6 +563,7 @@ public class Name implements javax.lang.model.element.Name {
         public final Name comma;
         public final Name semicolon;
         public final Name asterisk;
+        public final Name _innermethod;  // FCM-IM
         public final Name _this;
         public final Name _super;
         public final Name _default;
