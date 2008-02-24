@@ -741,15 +741,21 @@ public class Types {
      */
     public MethodSymbol singleMethodInterfaceMethodSymbol(Type t) {  // FCM-MREF
         if (t.isInterface()) {
+            // find all methods from all interfaces
+            List<Type> ifaces = interfaces(t);
+            ifaces = ifaces.append(t);
             ListBuffer<Symbol> validSyms = new ListBuffer<Symbol>();
-            for (Symbol inputSym : t.tsym.getEnclosedElements()) {
-                if (inputSym instanceof MethodSymbol) {
-                    validSyms.append(inputSym);
+            for (Type iface : ifaces) {
+                for (Symbol ifaceSym : iface.tsym.getEnclosedElements()) {
+                    if (ifaceSym instanceof MethodSymbol) {
+                        validSyms.append(ifaceSym);
+                    }
                 }
             }
             if (validSyms.size() == 1) {
                 return (MethodSymbol) validSyms.first();
             } else {
+                // remove methods from object
                 ListBuffer<Symbol> validSymsNoObjectSyms = new ListBuffer<Symbol>();
                 outer:
                 for (Symbol validSym : validSyms) {

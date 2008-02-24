@@ -535,6 +535,24 @@ public class TestFCM {
     }
 
     //-----------------------------------------------------------------------
+    public void testInnerMethod_matchAllInterfacesEmptySub() throws Exception {
+        TestStringIntFactoryEmptySub factory = #(String str) {
+            return Integer.parseInt(str);
+        };
+        assert factory != null;
+        assert factory.create("6") == 6;
+    }
+
+    //-----------------------------------------------------------------------
+    public void testInnerMethod_matchAllInterfacesEmptySuper() throws Exception {
+        TestStringIntFactoryEmptySuper factory = #(String str) {
+            return Integer.parseInt(str);
+        };
+        assert factory != null;
+        assert factory.create("6") == 6;
+    }
+
+    //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
     public void handleInstanceAction(ActionEvent ev) {
@@ -568,6 +586,16 @@ public class TestFCM {
     }
 
     interface TestStringIntFactory {
+        int create(String str);
+    }
+
+    interface TestStringIntFactoryEmptySub extends TestStringIntFactory {
+    }
+
+    interface TestStringIntFactoryEmpty {
+    }
+
+    interface TestStringIntFactoryEmptySuper extends TestStringIntFactoryEmpty {
         int create(String str);
     }
 
