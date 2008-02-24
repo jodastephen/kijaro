@@ -1083,7 +1083,7 @@ public class Attr extends JCTree.Visitor {
 
     public void visitExec(JCExpressionStatement tree) {
         attribExpr(tree.expr, env);
-        if (tree.expr.type instanceof MethodType && ((MethodType) tree.expr.type).innerMethod) {
+        if (tree.expr.type instanceof MethodType && ((MethodType) tree.expr.type).innerMethod ) {  // FCM-IM
             log.error(tree.pos(), "illegal.im.not.stmt");
         }
         result = null;
@@ -1911,7 +1911,7 @@ public class Attr extends JCTree.Visitor {
         }
 
         // a method or field access on a method type implies a literal not a reference
-        if (tree.selected.type instanceof MethodType) {
+        if (tree.selected.type instanceof MethodType) {  // FCM-MREF
             MethodType mtype = (MethodType) tree.selected.type;
             if (mtype.innerMethod) {
                 // ignore - error below
