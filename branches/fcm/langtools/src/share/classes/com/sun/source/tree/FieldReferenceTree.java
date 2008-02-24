@@ -1,4 +1,8 @@
 /*
+ * Changes for FCM implementation
+ * Copyright 2007-2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * @(#)MethodInvocationTree.java	1.3 06/12/14
  * 
  * Copyright (c) 2006 Sun Microsystems, Inc.  All Rights Reserved.
