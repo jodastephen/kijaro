@@ -3373,7 +3373,11 @@ public class Lower extends TreeTranslator {
         make_at(tree.pos());
         
         // create class
-        JCClassDecl clsDef = makeFcmAnonymousInnerClass(FINAL | SYNTHETIC, tree.type);
+        long flags = FINAL | SYNTHETIC;
+        if ((currentMethodSym.flags() & STATIC) > 0) {
+            flags |= (STATIC | NOOUTERTHIS);
+        }
+        JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.type);
         
         // create constructor and methods
         String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
