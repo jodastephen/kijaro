@@ -735,22 +735,34 @@ public class Types {
     // </editor-fold>
 
     /**
-     * Checks if the 'class' represents a single method interface.
+     * Checks if the type is classified as a single method interface.
      * The methods inherited from Object do not count in the definition.
      * @return the single method symbol, or null if not a single method interface
      */
     public MethodSymbol singleMethodInterfaceMethodSymbol(Type t) {  // FCM-MREF
         if (t.isInterface()) {
-            java.util.List<Symbol> list = t.tsym.getEnclosedElements();
-            for (Iterator<Symbol> it = list.iterator(); it.hasNext(); ) {
-                Symbol symbol = it.next();
-                if (symbol.getKind() != ElementKind.METHOD || symbol instanceof MethodSymbol == false) {
-                    it.remove();
+            ListBuffer<Symbol> validSyms = new ListBuffer<Symbol>();
+            for (Symbol inputSym : t.tsym.getEnclosedElements()) {
+                if (inputSym instanceof MethodSymbol) {
+                    validSyms.append(inputSym);
                 }
-                // TODO: remove methods also on Object
             }
-            if (list.size() == 1) {
-                return (MethodSymbol) list.get(0);
+            if (validSyms.size() == 1) {
+                return (MethodSymbol) validSyms.first();
+            } else {
+                ListBuffer<Symbol> validSymsNoObjectSyms = new ListBuffer<Symbol>();
+                outer:
+                for (Symbol validSym : validSyms) {
+                    for (Symbol objectSym : syms.objectType.tsym.getEnclosedElements()) {
+                        if (validSym.name.equals(objectSym.name) && validSym.overrides(objectSym, t.tsym, this, false)) {
+                            continue outer;
+                        }
+                    }
+                    validSymsNoObjectSyms.append(validSym);
+                }
+                if (validSymsNoObjectSyms.size() == 1) {
+                    return (MethodSymbol) validSymsNoObjectSyms.first();
+                }
             }
         }
         return null;

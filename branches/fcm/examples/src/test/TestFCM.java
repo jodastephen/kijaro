@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Comparator;
 
 public class TestFCM {
 
@@ -521,6 +522,16 @@ public class TestFCM {
         assert r != null;
         r.run();
         assert output.equals("Called");
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testInnerMethod_ignoreObjectMethods() throws Exception {
+        Comparator<String> c = #(String str1, String str2) {
+            return str1.length() - str2.length();
+        }; 
+        assert c != null;
+        assert c.compare("short", "longer") == -1;
+        assert c.compare("longer", "short") == 1;
     }
 
     //-----------------------------------------------------------------------
