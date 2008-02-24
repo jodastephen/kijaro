@@ -1,4 +1,8 @@
 /*
+ * Changes for FCM implementation
+ * Copyright 2007-2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
