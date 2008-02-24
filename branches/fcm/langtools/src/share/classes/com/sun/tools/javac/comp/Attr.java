@@ -1907,6 +1907,20 @@ public class Attr extends JCTree.Visitor {
             }
         }
 
+        // a method or field access on a method type implies a literal not a reference
+        if (tree.selected.type instanceof MethodType) {
+            MethodType mtype = (MethodType) tree.selected.type;
+            if (mtype.innerMethod) {
+                // ignore - error below
+            } else if (mtype.constructor) {
+                ClassType typedConstructor = new ClassType(Type.noType, List.of(mtype.restype), syms.reflectConstructorType.asElement());
+                tree.selected.type = typedConstructor;
+            } else {
+                tree.selected.type = syms.reflectMethodType;
+            }
+            site = tree.selected.type;
+        }
+
         // If qualifier symbol is a type or `super', assert `selectSuper'
         // for the selection. This is relevant for determining whether
         // protected symbols are accessible.
