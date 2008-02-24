@@ -3107,8 +3107,6 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitFieldReference (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3127,8 +3125,6 @@ public class Lower extends TreeTranslator {
         JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
         JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
         result = invokeTree;
-        
-        System.out.println("Lower.visitFieldReference (End)");
     }
 
     @Override
@@ -3141,8 +3137,6 @@ public class Lower extends TreeTranslator {
     }
 
     private void makeConstructorLiteral(JCConstructorReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitConstructorReference.makeConstructorLiteral (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3167,13 +3161,9 @@ public class Lower extends TreeTranslator {
         JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
         JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
         result = invokeTree;
-        
-        System.out.println("Lower.visitConstructorReference.makeConstructorLiteral (End)");
     }
 
     private void makeConstructorReference(JCConstructorReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitConstructorReference.makeConstructorReference (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3192,8 +3182,6 @@ public class Lower extends TreeTranslator {
         
         // return the updated AST
         result = translate(newClass);
-        
-        System.out.println("Lower.visitConstructorReference.makeConstructorReference (End)");
     }
 
     private void addFcmSmiConstructorReference(JCConstructorReference tree, JCClassDecl clsDef) {
@@ -3226,8 +3214,6 @@ public class Lower extends TreeTranslator {
     }
 
     private void makeMethodLiteral(JCMethodReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitMethodReference.makeMethodLiteral (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3253,13 +3239,9 @@ public class Lower extends TreeTranslator {
         JCExpression selectTree = make.Select(classOfType(targetType, tree.pos()), reflectLookupSym);
         JCMethodInvocation invokeTree = make.App(selectTree, argsTree);
         result = invokeTree;
-        
-        System.out.println("Lower.visitMethodReference.makeMethodLiteral (End)");
     }
 
     private void makeMethodReference(JCMethodReference tree) {  // FCM-MREF
-        System.out.println("Lower.visitMethodReference.makeMethodReference (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3288,8 +3270,6 @@ public class Lower extends TreeTranslator {
             JCNewClass newClass = makeNewClass(clsDef.type, List.<JCExpression>of(tree.target));
             result = translate(newClass);
         }
-        
-        System.out.println("Lower.visitMethodReference.makeMethodReference (End)");
     }
 
     private void addFcmSmiMethodReference(JCMethodReference tree, VarSymbol targetVarSym, JCClassDecl clsDef) {
@@ -3389,8 +3369,6 @@ public class Lower extends TreeTranslator {
 
     @Override
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
-        System.out.println("Lower.visitInnerMethod (Start)");
-        
         // start process of changing the AST
         make_at(tree.pos());
         
@@ -3408,8 +3386,6 @@ public class Lower extends TreeTranslator {
         
         // return the updated AST
         result = translate(newClass);
-        
-        System.out.println("Lower.visitInnerMethod (End)");
     }
 
     private void addFcmSmiInnerMethod(JCInnerMethod tree, JCClassDecl clsDef) {

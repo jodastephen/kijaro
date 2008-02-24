@@ -2488,8 +2488,6 @@ public class Attr extends JCTree.Visitor {
 
     @Override
     public void visitFieldReference(JCFieldReference tree) {  // FCM-MREF
-        System.out.println("Attr.visitFieldReference (Start)");
-        
         // resolve the target
         JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
         Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
@@ -2499,14 +2497,10 @@ public class Attr extends JCTree.Visitor {
         
         // assign and check types
         result = check(tree, syms.reflectFieldType, VAL, pkind, pt);
-        
-        System.out.println("Attr.visitFieldReference (End)");
     }
 
     @Override
     public void visitConstructorReference(JCConstructorReference tree) {  // FCM-MREF
-        System.out.println("Attr.visitConstructorReference (Start)");
-        
         // resolve the target
         JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
         Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
@@ -2524,14 +2518,10 @@ public class Attr extends JCTree.Visitor {
         } else {
             result = check(tree, sym.type, VAL, pkind, pt);
         }
-        
-        System.out.println("Attr.visitConstructorReference (End)");
     }
 
     @Override
     public void visitMethodReference(JCMethodReference tree) {  // FCM-MREF
-        System.out.println("Attr.visitMethodReference (Start)");
-        
         // resolve the target
         JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
         Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
@@ -2545,14 +2535,10 @@ public class Attr extends JCTree.Visitor {
             tree.convertFromMethodSymbol = (MethodSymbol) sym;
         }
         result = check(tree, sym.type, VAL, pkind, pt);
-        
-        System.out.println("Attr.visitMethodReference (End)");
     }
 
     @Override
     public void visitInnerMethod(JCInnerMethod tree) {  // FCM-IM
-        System.out.println("Attr.visitInnerMethod (Start)");
-        
         // setup scope for new method - taken from MemberEnter
         Env<AttrContext> localEnv = env.dup(tree, env.info.dup(env.info.scope.dupUnshared()));
         MethodType mtype = new MethodType(List.<Type>nil(), null, List.<Type>nil(), null);
@@ -2570,9 +2556,6 @@ public class Attr extends JCTree.Visitor {
         
         // store
         tree.convertFromMethodSymbol = msym;
-//        tree.method = mtree;
-//        tree.params = null;
-//        tree.body = null;
         
         // Set params and names, marking as varargs if necessary
         ListBuffer<VarSymbol> params = new ListBuffer<VarSymbol>();
@@ -2610,8 +2593,6 @@ public class Attr extends JCTree.Visitor {
         localEnv.info.scope.leave();
         
         result = check(tree, mtype, VAL, pkind, pt);
-        
-        System.out.println("Attr.visitInnerMethod (End)");
     }
         
     public void visitLiteral(JCLiteral tree) {
