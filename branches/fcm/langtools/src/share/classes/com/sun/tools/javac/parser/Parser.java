@@ -1110,6 +1110,7 @@ public class Parser {
                     JCBlock body = block();
                     List<JCVariableDecl> params = List.convert(JCVariableDecl.class, paramsOrTypes);
                     t = toP(F.at(pos).InnerMethod(params, body));
+                    return t;
                 } else if (paramsOrTypes.head instanceof JCExpression) {
                     // #(TypesOpt);  - Constructor reference
                     List<JCExpression> types = List.convert(JCExpression.class, paramsOrTypes);
@@ -1131,6 +1132,7 @@ public class Parser {
                 // # { ... };  - Inner method - shortcut with no params
                 JCBlock body = block();
                 t = toP(F.at(pos).InnerMethod(List.<JCVariableDecl>nil(), body));
+                return t;
             } else {
                 return illegal();
             }
