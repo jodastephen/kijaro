@@ -421,6 +421,26 @@ public class TestFCM {
     }
 
     //-----------------------------------------------------------------------
+    public void testInnerMethod_returnVoid() throws Exception {
+        Runnable r = #() {
+            output = "Called";
+        };
+        assert r != null;
+        r.run();
+        assert output.equals("Called");
+    }
+
+    //-----------------------------------------------------------------------
+    public void testInnerMethod_noArgsNoParams() throws Exception {
+        Runnable r = #{
+            output = "Called";
+        };
+        assert r != null;
+        r.run();
+        assert output.equals("Called");
+    }
+
+    //-----------------------------------------------------------------------
     public void testInnerMethod_returnBoxed() throws Exception {
         TestStringIntegerFactory factory = #(String str) {
             return Integer.parseInt(str);  // int - boxed
@@ -482,6 +502,25 @@ public class TestFCM {
             return Integer.parseInt(str);
         }, "6");
         assert result == 6;
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testInnerMethod_createInStatic() throws Exception {
+        TestStringIntFactory factory = #(String str) {
+            return Integer.parseInt(str);
+        };
+        assert factory != null;
+        assert factory.create("6") == 6;
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testInnerMethod_createInStatic_returnVoid() throws Exception {
+        Runnable r = #() {
+            output = "Called";
+        };
+        assert r != null;
+        r.run();
+        assert output.equals("Called");
     }
 
     //-----------------------------------------------------------------------
