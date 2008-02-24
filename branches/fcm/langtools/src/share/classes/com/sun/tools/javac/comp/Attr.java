@@ -1083,6 +1083,9 @@ public class Attr extends JCTree.Visitor {
 
     public void visitExec(JCExpressionStatement tree) {
         attribExpr(tree.expr, env);
+        if (tree.expr.type instanceof MethodType && ((MethodType) tree.expr.type).innerMethod) {
+            log.error(tree.pos(), "illegal.im.not.stmt");
+        }
         result = null;
     }
 
