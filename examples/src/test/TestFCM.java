@@ -442,6 +442,29 @@ public class TestFCM {
     }
 
     //-----------------------------------------------------------------------
+    public void testInnerMethod_paramVariant() throws Exception {
+        ActionListener lnr = #(Object ev) {
+            event = (ActionEvent) ev;
+            output = name;
+        };
+        assert lnr != null;
+        ActionEvent input = new ActionEvent("src", 0, "testInnerMethod_paramVariant");
+        lnr.actionPerformed(input);
+        assert input == event;
+        assert output.equals("Main");
+    }
+
+    //-----------------------------------------------------------------------
+    public void testInnerMethod_returnVariant() throws Exception {
+        TestStringNumberFactory factory = #(String str) {
+            return new Integer(str);
+        };
+        assert factory != null;
+        Integer expected = new Integer(6);
+        assert expected.equals(factory.create("6"));
+    }
+
+    //-----------------------------------------------------------------------
     public void testInnerMethod_returnBoxed() throws Exception {
         TestStringIntegerFactory factory = #(String str) {
             return Integer.parseInt(str);  // int - boxed
