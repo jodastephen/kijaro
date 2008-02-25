@@ -278,7 +278,29 @@ public class Types {
         	if (s instanceof ClassType) {
 	            MethodSymbol smiSym = singleMethodInterfaceMethodSymbol(s);
 	            if (smiSym != null) {
-	                return isConvertible(t, smiSym.type, warn);
+	                // process here as s has the generics info
+                    if (t.getParameterTypes().size() != smiSym.type.getParameterTypes().size()) {
+                        return false;
+                    }
+	                if (isSameType(t, smiSym.type)) {
+	                    return true;
+	                }
+	                ClassType sc = (ClassType) s;
+	                if (sc.getTypeArguments().size() == 0) {
+	                    // apply arrow rule
+	                    Iterator<Type> tIt = t.getParameterTypes().iterator();
+	                    Iterator<Type> sIt = smiSym.type.getParameterTypes().iterator();
+	                    while (tIt.hasNext()) {
+	                        Type tparam = erasure(tIt.next());
+	                        Type sparam = erasure(sIt.next());
+	                        if (isSubtypeUnchecked(sparam, tparam, warn) == false) {  // reversed params
+	                            return false;
+	                        }
+	                    }
+	                } else {
+	                    // TODO: Generics
+	                }
+	                return isConvertible(t.getReturnType(), smiSym.type.getReturnType(), warn);
 	            } else {
 	            	MethodType mthType = (MethodType) t;
 	            	if (mthType.constructor) {  // constructor literal?
@@ -294,9 +316,20 @@ public class Types {
         	    if (isSameType(t, s)) {
         	        return true;
         	    }
-                MethodType tmt = (MethodType) t;
-                MethodType smt = (MethodType) s;
-                return isConvertible(tmt.getReturnType(), smt.getReturnType(), warn);
+        	    // apply arrow rule
+                if (t.getParameterTypes().size() != s.getParameterTypes().size()) {
+                    return false;
+                }
+                Iterator<Type> tIt = t.getParameterTypes().iterator();
+                Iterator<Type> sIt = s.getParameterTypes().iterator();
+                while (tIt.hasNext()) {
+                    Type tparam = erasure(tIt.next());
+                    Type sparam = erasure(sIt.next());
+                    if (isSubtypeUnchecked(sparam, tparam, warn) == false) {  // reversed params
+                        return false;
+                    }
+                }
+                return isConvertible(t.getReturnType(), s.getReturnType(), warn);
         	}
             return false;
         }
