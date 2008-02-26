@@ -512,6 +512,7 @@ public class TransTypes extends TreeTranslator {
         tree.expr = translate(tree.expr, erasure(tree.expr.type));
         tree.map = translate(tree.map, null);
         tree.filter = translate(tree.filter, null);
+        tree.type = erasure(tree.type);
         result = tree;
     }
 
