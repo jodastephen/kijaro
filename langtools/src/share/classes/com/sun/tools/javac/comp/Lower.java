@@ -3065,6 +3065,9 @@ public class Lower extends TreeTranslator {
         JCNewClass newClass = makeNewClass(iterableClsDef.type,
                 List.<JCExpression>of(translate(tree.expr)));
 
+        // Make sure we found a constructor.
+        assert newClass.constructor.owner != null;
+
         // Return the updated AST.
         result = translate(newClass);
     }

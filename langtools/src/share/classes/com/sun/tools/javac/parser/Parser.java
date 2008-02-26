@@ -1085,9 +1085,9 @@ public class Parser {
             accept(FOR);
             List<JCStatement> inits;
 
-            // Parse the type, modifiers, and name of our loop variable.
-            JCExpression type = term(TYPE);
-            JCModifiers mods = modifiersOpt();
+            // Parse the modifiers, type, and name of our loop variable.
+            JCModifiers mods = optFinal(0); // "final" is the only allowed modifier.
+            JCExpression type = type();
             Name variableName = ident();
             JCVariableDecl variableDecl = toP(F.at(S.pos()).VarDef(mods,
                         variableName, type, null));
