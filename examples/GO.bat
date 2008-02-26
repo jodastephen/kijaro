@@ -27,11 +27,11 @@ REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeStaticMethod.java && java Free
 ECHO NestedInForeach.java
 REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% NestedInForeach.java && java NestedInForeach
 
+ECHO ArrayInput.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% ArrayInput.java && java ArrayInput
+
 ECHO AnonClass.java (will fail to compile)
 REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% AnonClass.java && java AnonClass
-
-ECHO ArrayInput.java (will fail to compile)
-java -jar %COMPILER_JAR% %COMPILER_FLAGS% ArrayInput.java && java ArrayInput
 
 ECHO FreeLocal.java (will fail to compile)
 REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeLocal.java && java FreeLocal
