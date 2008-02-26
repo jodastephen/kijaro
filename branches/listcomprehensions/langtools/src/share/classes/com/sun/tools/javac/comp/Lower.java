@@ -271,6 +271,7 @@ public class Lower extends TreeTranslator {
          */
         public void visitNewClass(JCNewClass tree) {
             ClassSymbol c = (ClassSymbol)tree.constructor.owner;
+            assert c != null;
             addFreeVars(c);
             if (tree.encl == null &&
                 c.hasOuterInstance() &&
@@ -2971,7 +2972,7 @@ public class Lower extends TreeTranslator {
             <li>A is an expression of B evaluating to type T1</li>
             <li>T2 is a type assignable from T3</li>
             <li>B is an identifier</li>
-            <li>C is an Iterable parameterized on T3</li>
+            <li>C is an Iterable parameterized on T3 or an array of T3</li>
             <li>T3 is a type</li>
             <li>D is an expression of B evaluating to boolean</li>
         </ul>
@@ -2979,7 +2980,8 @@ public class Lower extends TreeTranslator {
         The "if D" clause is optional. If omitted, "D" default to "true".
         The entire expression evaluates to an Iterable&lt;T1&gt;. Note
         that any free variables in A, C, or D must be marked "final", as
-        in anonymous inner classes. The expression is translated to:
+        in anonymous inner classes. If C is an Iterable, the C expression
+        is translated to:
 
         <pre>
         Iterable&lt;T1&gt; newList2 = new Iterable&lt;T1&gt;(C) {
@@ -3045,23 +3047,100 @@ public class Lower extends TreeTranslator {
             }
         };
         </pre>
+
+        If the expression C&lt;T3&gt; is an array, then the translation is to:
+
+        <pre>
+        Iterable&lt;T1&gt; newList2 = new Iterable&lt;T1&gt;(C) {
+            // Evaluate C only once; that's likely what the caller expects.
+            private final T3[] lc$mArray;
+
+            &lt;init&gt;(T3[] lc$mArray) {
+                super();
+                this.lc$mArray = lc$mArray;
+            }
+
+            public Iterator&lt;T1&gt; iterator() {
+                return new Iterator&lt;T1&gt;(lc$mArray) {
+                    private final T3[] lc$mArray;
+                    private boolean lc$mKnowIfHasNext = false;
+                    // Can't use lc$mNext == null since null is a valid element.
+                    private boolean lc$mHasNext;
+                    private T3 lc$mNext;
+                    private int lc$mLength;
+                    private int lc$mIndex = 0;
+
+                    &lt;init&gt;(T3[] lc$mArray) {
+                        super();
+                        this.lc$mArray = lc$mArray;
+                        this.lc$mLength = lc$mArray.length;
+                    }
+
+                    public boolean hasNext() {
+                        // This function is idempotent.
+                        if (lc$mKnowIfHasNext) {
+                            return lc$mHasNext;
+                        }
+
+                        // We'll figure it out one way or another.
+                        lc$mKnowIfHasNext = true;
+                        lc$mHasNext = false;
+
+                        while (this.lc$mIndex &lt; this.lc$mLength) {
+                            lc$mNext = lc$mArray[this.lc$mIndex++];
+                            T2 x = lc$mNext;
+                            if (D) {
+                                lc$mHasNext = true;
+                                break;
+                            }
+                        }
+
+                        return lc$mHasNext;
+                    }
+
+                    public T1 next() {
+                        // We must call our own hasNext()
+                        // because it does something.
+                        if (!hasNext()) {
+                            throw new NoSuchElementException();
+                        }
+
+                        lc$mKnowIfHasNext = false;
+                        T2 x = lc$mNext;
+                        return A;
+                    }
+
+                    public void remove() {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            }
+        };
+        </pre>
     */
 
     public void visitComprehension(JCComprehension tree) {          // LISTCOMP
         // Start process of changing the AST.
         make_at(tree.pos());
 
+        // The type of the expression C.
+        Type exprType = tree.expr.type;
+
+        // See if the expression is an array. This will be the type of the element of
+        // the array, or null if it's an Iterable.
+        Type elemType = types.elemtype(exprType);
+
         // Make an anonymous class that implements Iterator. We will create an
         // instance of it whenever our comprehension is invoked.
         JCClassDecl iteratorClsDef = makeLcIteratorClass(translate(tree.var),
-                translate(tree.map), translate(tree.filter), tree.exprTypeArg);
+                translate(tree.map), translate(tree.filter), tree.exprTypeArg, exprType, elemType);
 
         // Make an anonymous class that implements Iterable. The comprehension
         // will be an instance of this class.
-        JCClassDecl iterableClsDef = makeLcIterableClass(iteratorClsDef);
+        JCClassDecl iterableClsDef = makeLcIterableClass(iteratorClsDef, exprType, elemType);
 
         // Create a new instance of our class. The constructor takes the
-        // expression that evaluates to an Iterable.
+        // expression that evaluates to an Iterable or array.
         JCNewClass newClass = makeNewClass(iterableClsDef.type,
                 List.<JCExpression>of(translate(tree.expr)));
 
@@ -3073,24 +3152,29 @@ public class Lower extends TreeTranslator {
     }
 
     private JCClassDecl makeLcIteratorClass(JCVariableDecl var, JCExpression map,     // LISTCOMP
-            JCExpression filter, Type iterableTypeArg) {
+            JCExpression filter, Type iterableTypeArg, Type exprType, Type elemType) {
+
+        // Figure out what our real element type is, whether array or Iterable.
+        Type realElemType = elemType != null ? elemType : iterableTypeArg;
 
         // Make the anonymous inner Iterator class for this comprehension.
         long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
         JCClassDecl iteratorClsDef = makeLcAnonymousInnerClass(flags, syms.iteratorType);
 
         // Add various instance fields.
-        VarSymbol iteratorSym = addLcFinalIteratorField(iteratorClsDef);
+        VarSymbol iteratorSym = addLcIteratorField(iteratorClsDef, exprType, elemType);
         VarSymbol knowIfHasNextSym = addLcKnowIfHasNextField(iteratorClsDef);
         VarSymbol hasNextSym = addLcHasNextField(iteratorClsDef);
-        VarSymbol nextSym = addLcNextField(iteratorClsDef, iterableTypeArg);
+        VarSymbol nextSym = addLcNextField(iteratorClsDef, realElemType);
+        VarSymbol indexSym = addLcIndexField(iteratorClsDef, elemType);
+        VarSymbol lengthSym = addLcLengthField(iteratorClsDef, elemType);
 
-        // Add a constructor, which takes the Iterator and stores it in the final field.
-        addLcIteratorConstructor(iteratorClsDef, iteratorSym);
+        // Add a constructor, which takes the Iterator or array and stores it in the final field.
+        addLcIteratorConstructor(iteratorClsDef, iteratorSym, lengthSym, exprType, elemType);
 
         // Add the three methods required by Iterator.
         addLcHasNextMethod(iteratorClsDef, iteratorSym, knowIfHasNextSym, hasNextSym, nextSym,
-                var, filter, iterableTypeArg);
+                indexSym, lengthSym, var, filter, iterableTypeArg, exprType, elemType);
         addLcNextMethod(iteratorClsDef, iteratorSym, knowIfHasNextSym, nextSym,
                 var, map, iterableTypeArg);
         addLcRemoveMethod(iteratorClsDef);
@@ -3098,21 +3182,33 @@ public class Lower extends TreeTranslator {
         return iteratorClsDef;
     }
 
-    private VarSymbol addLcFinalIteratorField(JCClassDecl iteratorClsDef) {         // LISTCOMP
+    private VarSymbol addLcIteratorField(JCClassDecl iteratorClsDef,         // LISTCOMP
+            Type exprType, Type elemType) {
+
         // Add this final field to the inner anonymous class.
         //
-        //     private final Iterator&lt;T3&gt; lc$mIterator;
+        //      private final Iterator&lt;T3&gt; lc$mIterator;
+        //
+        // or:
+        //
+        //      private final T3[] lc$mArray;
         //
         // We initialize it in the constructor.
 
         long flags = FINAL | SYNTHETIC | PRIVATE;
-        VarSymbol iteratorSym = new VarSymbol(flags, names.fromString("lc$mIterator"),
-                syms.iteratorType, iteratorClsDef.sym);
-        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(iteratorSym, null);
-        iteratorClsDef.sym.members().enter(iteratorSym);
-        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+        VarSymbol fieldSym;
+        if (elemType == null) {
+            fieldSym = new VarSymbol(flags, names.fromString("lc$mIterator"),
+                    syms.iteratorType, iteratorClsDef.sym);
+        } else {
+            fieldSym = new VarSymbol(flags, names.fromString("lc$mArray"),
+                    exprType, iteratorClsDef.sym);
+        }
+        JCVariableDecl fieldDef = make.at(make_pos).VarDef(fieldSym, null);
+        iteratorClsDef.sym.members().enter(fieldSym);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(fieldDef);
 
-        return iteratorSym;
+        return fieldSym;
     }
 
     private VarSymbol addLcKnowIfHasNextField(JCClassDecl iteratorClsDef) {         // LISTCOMP
@@ -3154,23 +3250,83 @@ public class Lower extends TreeTranslator {
         long flags = SYNTHETIC | PRIVATE;
         VarSymbol nextSym = new VarSymbol(flags, names.fromString("lc$mNext"),
                 iterableTypeArg, iteratorClsDef.sym);
-        JCVariableDecl iteratorDef = make.at(make_pos).VarDef(nextSym, null);
+        JCVariableDecl nextDef = make.at(make_pos).VarDef(nextSym, null);
         iteratorClsDef.sym.members().enter(nextSym);
-        iteratorClsDef.defs = iteratorClsDef.defs.prepend(iteratorDef);
+        iteratorClsDef.defs = iteratorClsDef.defs.prepend(nextDef);
 
         return nextSym;
     }
 
-    private void addLcIteratorConstructor(JCClassDecl iteratorClsDef,
-            VarSymbol iteratorSym) {                                            // LISTCOMP
+    private VarSymbol addLcIndexField(JCClassDecl iteratorClsDef, Type elemType) {  // LISTCOMP
+        // Generate this code:
+        //
+        //     private int lc$mIndex = 0;
+        //
+        // But only if we're looping over an array.
 
-        // Define the constructor. It takes an Iterator parameter.
-        MethodType conType = new MethodType(List.<Type>of(syms.iteratorType), syms.voidType,
+        VarSymbol indexSym;
+        if (elemType == null) {
+            indexSym = null;
+        } else {
+            long flags = SYNTHETIC | PRIVATE;
+            indexSym = new VarSymbol(flags, names.fromString("lc$mIndex"),
+                    syms.intType, iteratorClsDef.sym);
+            JCVariableDecl indexDef = make.at(make_pos).VarDef(indexSym, makeLit(syms.intType, 0));
+            iteratorClsDef.sym.members().enter(indexSym);
+            iteratorClsDef.defs = iteratorClsDef.defs.prepend(indexDef);
+        }
+
+        return indexSym;
+    }
+
+    private VarSymbol addLcLengthField(JCClassDecl iteratorClsDef, Type elemType) {   // LISTCOMP
+
+        // Generate this code:
+        //
+        //     private int lc$mLength;
+        //
+        // But only if we're looping over an array.
+
+        VarSymbol lengthSym;
+        if (elemType == null) {
+            lengthSym = null;
+        } else {
+            long flags = SYNTHETIC | PRIVATE;
+            lengthSym = new VarSymbol(flags, names.fromString("lc$mLength"),
+                    syms.intType, iteratorClsDef.sym);
+            JCVariableDecl lengthDef = make.at(make_pos).VarDef(lengthSym, null);
+            iteratorClsDef.sym.members().enter(lengthSym);
+            iteratorClsDef.defs = iteratorClsDef.defs.prepend(lengthDef);
+        }
+
+        return lengthSym;
+    }
+
+    private void addLcIteratorConstructor(JCClassDecl iteratorClsDef,               // LISTCOMP
+            VarSymbol iteratorSym, VarSymbol lengthSym, Type exprType, Type elemType) {
+
+        // Define the constructor. It takes an Iterator or array parameter.
+        Type paramType;
+        if (elemType == null) {
+            paramType = syms.iteratorType;
+        } else {
+            paramType = exprType;
+        }
+        MethodType conType = new MethodType(List.<Type>of(paramType), syms.voidType,
                 List.<Type>nil(), iteratorClsDef.sym);
         MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, iteratorClsDef.sym);
-        VarSymbol iteratorParamSym = new VarSymbol(FINAL | SYNTHETIC,
-                names.fromString("lc$mIterator"), syms.iteratorType, conSym);
-        conSym.params = List.<VarSymbol>of(iteratorParamSym);
+        VarSymbol paramSym;
+        if (elemType == null) {
+            paramSym = new VarSymbol(FINAL | SYNTHETIC,
+                    names.fromString("lc$mIterator"), syms.iteratorType, conSym);
+        } else {
+            paramSym = new VarSymbol(FINAL | SYNTHETIC,
+                    names.fromString("lc$mArray"), exprType, conSym);
+        }
+        conSym.params = List.<VarSymbol>of(paramSym);
+
+        // The statements in our constructor.
+        ListBuffer<JCStatement> stats = new ListBuffer<JCStatement>();
 
         // Call the Object constructor (super()).
         JCIdent zuper = make.Ident(names._super);
@@ -3179,26 +3335,39 @@ public class Lower extends TreeTranslator {
         JCMethodInvocation callSuper = make.Apply(List.<JCExpression>nil(),
                 zuper, List.<JCExpression>nil());
         callSuper.setType(syms.voidType);
-        JCExpressionStatement callSuperStatement = make.Exec(callSuper);
+        stats.append(make.Exec(callSuper));
 
         // Assign our local lc$mIterator field from the constructor's parameter.
         JCExpression iteratorRef = make.Select(make.This(iteratorClsDef.type), iteratorSym);
-        JCExpression iteratorParamRef = make.Ident(iteratorParamSym);
-        JCExpression initIteratorExpr = make.Assign(iteratorRef, iteratorParamRef);
+        JCExpression paramRef = make.Ident(paramSym);
+        JCExpression initIteratorExpr = make.Assign(iteratorRef, paramRef);
         initIteratorExpr.setType(iteratorRef.type);
-        JCExpressionStatement initIteratorStatement = make.Exec(initIteratorExpr);
+        stats.append(make.Exec(initIteratorExpr));
+
+        // Assign out lc$mLength field to the length of the array, if necessary.
+        if (lengthSym != null) {
+            JCExpression lengthRef = make.Select(make.This(iteratorClsDef.type), lengthSym);
+            JCExpression arrayRef = make.Select(make.This(iteratorClsDef.type), iteratorSym);
+            JCExpression arrayLengthRef = make.Select(arrayRef, syms.lengthVar);
+            JCExpression initLengthExpr = make.Assign(lengthRef, arrayLengthRef);
+            initLengthExpr.setType(syms.intType);
+            stats.append(make.Exec(initLengthExpr));
+        }
 
         // Make the constructor body.
-        JCBlock conBody = make.Block(0L,
-                List.<JCStatement>of(callSuperStatement, initIteratorStatement));
+        JCBlock conBody = make.Block(0L, stats.toList());
         JCMethodDecl conDef = make.MethodDef(conSym, conBody);
         iteratorClsDef.sym.members().enter(conSym);
         iteratorClsDef.defs = iteratorClsDef.defs.append(conDef);
     }
 
-    private void addLcHasNextMethod(JCClassDecl iteratorClsDef, VarSymbol iteratorSym,
+    private void addLcHasNextMethod(JCClassDecl iteratorClsDef, VarSymbol iteratorSym,  // LISTCOMP
             VarSymbol knowIfHasNextSym, VarSymbol hasNextSym, VarSymbol nextSym,
-            JCVariableDecl var, JCExpression filter, Type iterableTypeArg) {            // LISTCOMP
+            VarSymbol indexSym, VarSymbol lengthSym, JCVariableDecl var,
+            JCExpression filter, Type iterableTypeArg, Type exprType, Type elemType) {
+
+        // Figure out what our real element type is, whether array or Iterable.
+        Type realElemType = elemType != null ? elemType : iterableTypeArg;
 
         // Declare the hasNext() method.
         MethodType hasNextMethodType = new MethodType(
@@ -3230,15 +3399,27 @@ public class Lower extends TreeTranslator {
         ListBuffer<JCStatement> whileStats = new ListBuffer<JCStatement>();
 
         // Get the next item of the source iterator.
+        JCExpression nextExpr;
+        if (elemType == null) {
+            //      this.lc$mNext = (T3) this.lc$mIterator.next();
+            nextExpr = make.TypeCast(iterableTypeArg,
+                                     makeCall(make.Select(make.This(clsType), iteratorSym),
+                                              names.next,
+                                              List.<JCExpression>nil()));
+        } else {
+            //      this.lc$mNext = this.lc$mArray[this.lc$mIndex++];
+            JCExpression array = make.Select(make.This(clsType), iteratorSym);
+            JCExpression postIncIndex = makeUnary(JCTree.POSTINC,
+                    make.Select(make.This(clsType), indexSym));
+            nextExpr = make.Indexed(array, postIncIndex);
+            nextExpr.setType(elemType);
+        }
         whileStats.append(
                 make.Exec(
                     make.Assign(
                         make.Select(make.This(clsType), nextSym),
-                        make.TypeCast(iterableTypeArg,
-                                      makeCall(make.Select(make.This(clsType), iteratorSym),
-                                               names.next,
-                                               List.<JCExpression>nil())))
-                    .setType(iterableTypeArg)));
+                        nextExpr)
+                    .setType(realElemType)));
 
         // In the "if" body we say that there is a next. We keep the breakStatement
         // around so we can point it at the while loop later.
@@ -3274,10 +3455,20 @@ public class Lower extends TreeTranslator {
         }
 
         // As long as the original iterator has a next, keep trying.
-        JCWhileLoop whileLoop = make.WhileLoop(makeCall(make.Select(make.This(clsType),
-                                                                    iteratorSym),
-                                                        names.hasNext,
-                                                        List.<JCExpression>nil()),
+        JCExpression whileCondition;
+        if (elemType == null) {
+            //  while (lc$mIterator.hasNext()) {
+            whileCondition = makeCall(make.Select(make.This(clsType),
+                                                  iteratorSym),
+                                      names.hasNext,
+                                      List.<JCExpression>nil());
+        } else {
+            //  while (this.lc$mIndex < this.lc$mLength) {
+            JCExpression index = make.Select(make.This(clsType), indexSym);
+            JCExpression length = make.Select(make.This(clsType), lengthSym);
+            whileCondition = makeBinary(JCTree.LT, index, length);
+        }
+        JCWhileLoop whileLoop = make.WhileLoop(whileCondition,
                                                make.Block(0L, whileStats.toList()));
         breakStatement.target = whileLoop;
         stats.append(whileLoop);
@@ -3389,24 +3580,26 @@ public class Lower extends TreeTranslator {
         iteratorClsDef.defs = iteratorClsDef.defs.append(removeMethodDef);
     }
 
-    private JCClassDecl makeLcIterableClass(JCClassDecl iteratorClsDef) {           // LISTCOMP
+    private JCClassDecl makeLcIterableClass(JCClassDecl iteratorClsDef,             // LISTCOMP
+            Type exprType, Type elemType) {
+
         // Make the anonymous inner Iterable class for this comprehension.
         long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
         JCClassDecl iterableClsDef = makeLcAnonymousInnerClass(flags, syms.iterableType);
 
-        // Add an instance field for storing the passed-in iterable.
-        VarSymbol iterableSym = addLcFinalIterableField(iterableClsDef);
+        // Add an instance field for storing the passed-in Iterable or array.
+        VarSymbol iterableSym = addLcIterableField(iterableClsDef, exprType, elemType);
 
-        // Add a constructor, which takes the Iterable and stores it in the final field.
-        addLcIterableConstructor(iterableClsDef, iterableSym);
+        // Add a constructor, which takes the Iterable or array and stores it in the final field.
+        addLcIterableConstructor(iterableClsDef, iterableSym, exprType, elemType);
 
         // Add the iterator() method required by Iterable interface.
-        addLcIteratorMethod(iterableClsDef, iterableSym, iteratorClsDef);
+        addLcIteratorMethod(iterableClsDef, iterableSym, iteratorClsDef, exprType, elemType);
 
         return iterableClsDef;
     }
 
-    private JCClassDecl makeLcAnonymousInnerClass(long flags, Type ifaceType) {         // LISTCOMP
+    private JCClassDecl makeLcAnonymousInnerClass(long flags, Type ifaceType) {      // LISTCOMP
         // XXX Combine this with Fcm's version.
         ClassSymbol clsSym = makeEmptyClass(flags, currentClass);
 
@@ -3422,35 +3615,61 @@ public class Lower extends TreeTranslator {
         return clsDef;
     }
 
-    private VarSymbol addLcFinalIterableField(JCClassDecl iterableClsDef) {         // LISTCOMP
+    private VarSymbol addLcIterableField(JCClassDecl iterableClsDef,           // LISTCOMP
+            Type exprType, Type elemType) {
+
         // We must add this final field to the outer anonymous class, so that
-        // the iterable is only evaluated once, not each time the comprehension
+        // the Iterable is only evaluated once, not each time the comprehension
         // is invoked.
         //
-        //     private final Iterable&lt;T3&gt; lc$mIterable;
+        //      private final Iterable&lt;T3&gt; lc$mIterable;
+        //
+        // or:
+        //
+        //      private final T3[] lc$mArray;
         //
         // We initialize it in the constructor.
 
         long flags = FINAL | SYNTHETIC | PRIVATE;
-        VarSymbol iterableSym = new VarSymbol(flags, names.fromString("lc$mIterable"),
-                syms.iterableType, iterableClsDef.sym);
-        JCVariableDecl iterableDef = make.at(make_pos).VarDef(iterableSym, null);
-        iterableClsDef.sym.members().enter(iterableSym);
-        iterableClsDef.defs = iterableClsDef.defs.prepend(iterableDef);
+        VarSymbol fieldSym;
 
-        return iterableSym;
+        if (elemType == null) {
+            fieldSym = new VarSymbol(flags, names.fromString("lc$mIterable"),
+                    syms.iterableType, iterableClsDef.sym);
+        } else {
+            fieldSym = new VarSymbol(flags, names.fromString("lc$mArray"),
+                    exprType, iterableClsDef.sym);
+        }
+
+        JCVariableDecl fieldDef = make.at(make_pos).VarDef(fieldSym, null);
+        iterableClsDef.sym.members().enter(fieldSym);
+        iterableClsDef.defs = iterableClsDef.defs.prepend(fieldDef);
+
+        return fieldSym;
     }
 
-    private void addLcIterableConstructor(JCClassDecl iterableClsDef,
-            VarSymbol iterableSym) {                                                // LISTCOMP
+    private void addLcIterableConstructor(JCClassDecl iterableClsDef,              // LISTCOMP
+            VarSymbol fieldSym, Type exprType, Type elemType) {
 
-        // Define the constructor. It takes an Iterable parameter.
-        MethodType conType = new MethodType(List.<Type>of(syms.iterableType), syms.voidType,
+        // Define the constructor. It takes an Iterable or array parameter.
+        Type paramType;
+        if (elemType == null) {
+            paramType = syms.iterableType;
+        } else {
+            paramType = exprType;
+        }
+        MethodType conType = new MethodType(List.<Type>of(paramType), syms.voidType,
                 List.<Type>nil(), iterableClsDef.sym);
         MethodSymbol conSym = new MethodSymbol(0L, names.init, conType, iterableClsDef.sym);
-        VarSymbol iterableParamSym = new VarSymbol(FINAL | SYNTHETIC,
-                names.fromString("lc$mIterable"), syms.iterableType, conSym);
-        conSym.params = List.<VarSymbol>of(iterableParamSym);
+        VarSymbol paramSym;
+        if (elemType == null) {
+            paramSym = new VarSymbol(FINAL | SYNTHETIC,
+                    names.fromString("lc$mIterable"), syms.iterableType, conSym);
+        } else {
+            paramSym = new VarSymbol(FINAL | SYNTHETIC,
+                    names.fromString("lc$mArray"), exprType, conSym);
+        }
+        conSym.params = List.<VarSymbol>of(paramSym);
 
         // Call the Object constructor (super()).
         JCIdent zuper = make.Ident(names._super);
@@ -3462,9 +3681,9 @@ public class Lower extends TreeTranslator {
         JCExpressionStatement callSuperStatement = make.Exec(callSuper);
 
         // Assign our local lc$mIterable field.
-        JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), iterableSym);
-        JCExpression iterableParamRef = make.Ident(iterableParamSym);
-        JCExpression initIterableExpr = make.Assign(iterableRef, iterableParamRef);
+        JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), fieldSym);
+        JCExpression paramRef = make.Ident(paramSym);
+        JCExpression initIterableExpr = make.Assign(iterableRef, paramRef);
         initIterableExpr.setType(iterableRef.type);
         JCExpressionStatement initIterableStatement = make.Exec(initIterableExpr);
 
@@ -3476,8 +3695,8 @@ public class Lower extends TreeTranslator {
         iterableClsDef.defs = iterableClsDef.defs.append(conDef);
     }
 
-    private void addLcIteratorMethod(JCClassDecl iterableClsDef,
-            VarSymbol iterableSym, JCClassDecl iteratorClsDef) {                    // LISTCOMP
+    private void addLcIteratorMethod(JCClassDecl iterableClsDef,                    // LISTCOMP
+            VarSymbol fieldSym, JCClassDecl iteratorClsDef, Type exprType, Type elemType) {
 
         // Declare the iterator() method.
         MethodType iteratorMethodType = new MethodType(
@@ -3486,15 +3705,21 @@ public class Lower extends TreeTranslator {
         MethodSymbol iteratorMethodSym = new MethodSymbol(PUBLIC,
                 names.iterator, iteratorMethodType, iterableClsDef.type.tsym);
 
-        // Call lc$mIterable.iterator().
-        JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), iterableSym);
-        JCMethodInvocation callIterator = makeCall(iterableRef,
-                names.iterator, List.<JCExpression>nil());
-        callIterator.type = syms.iteratorType;
+        JCExpression constructorParam;
+        if (elemType == null) {
+            // Call lc$mIterable.iterator().
+            JCExpression iterableRef = make.Select(make.This(iterableClsDef.type), fieldSym);
+            constructorParam = makeCall(iterableRef, names.iterator, List.<JCExpression>nil());
+            constructorParam.type = syms.iteratorType;
+        } else {
+            // Just pass in our array.
+            constructorParam = make.Select(make.This(iterableClsDef.type), fieldSym);
+            constructorParam.type = exprType;
+        }
 
         // Pass that to a new instance of our Iterator class.
         JCNewClass newClass = makeNewClass(iteratorClsDef.type,
-                List.<JCExpression>of(callIterator));
+                List.<JCExpression>of(constructorParam));
 
         // Return the new instance.
         JCStatement returnStatement = make.Return(newClass);

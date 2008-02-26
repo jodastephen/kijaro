@@ -62,6 +62,7 @@ public class Resolve {
     public final boolean boxingEnabled; // = source.allowBoxing();
     public final boolean varargsEnabled; // = source.allowVarargs();
     private final boolean debugResolve;
+    public boolean lcDebug = false;     // LISTCOMP
 
     public static Resolve instance(Context context) {
         Resolve instance = context.get(resolveKey);
@@ -735,12 +736,20 @@ public class Resolve {
                               boolean operator) {
         for (Type ct = intype; ct.tag == CLASS; ct = types.supertype(ct)) {
             ClassSymbol c = (ClassSymbol)ct.tsym;
+            if (lcDebug) {
+                System.out.println("ct = " + ct + ", c = " + c + ", name = " + name);
+            }
             if ((c.flags() & (ABSTRACT | INTERFACE)) == 0)
                 abstractok = false;
             for (Scope.Entry e = c.members().lookup(name);
                  e.scope != null;
                  e = e.next()) {
-                //- System.out.println(" e " + e.sym);
+                if (lcDebug) {
+                    System.out.println(" e " + e.sym + ", method = " +
+                            (e.sym.kind == MTH) +
+                            ", synthetic = " +
+                            ((e.sym.flags_field & SYNTHETIC) != 0));
+                }
                 if (e.sym.kind == MTH &&
                     (e.sym.flags_field & SYNTHETIC) == 0) {
                     bestSoFar = selectBest(env, site, argtypes, typeargtypes,
@@ -750,7 +759,9 @@ public class Resolve {
                                            operator);
                 }
             }
-            //- System.out.println(" - " + bestSoFar);
+            if (lcDebug) {
+                System.out.println(" - " + bestSoFar);
+            }
             if (abstractok) {
                 Symbol concrete = methodNotFound;
                 if ((bestSoFar.flags() & ABSTRACT) == 0)
