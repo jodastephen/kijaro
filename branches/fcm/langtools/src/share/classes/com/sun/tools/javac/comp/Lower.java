@@ -3251,7 +3251,8 @@ public class Lower extends TreeTranslator {
         
         // create class
         long flags = FINAL | SYNTHETIC;
-        if (tree.isStaticReference() || (currentMethodSym.flags() & STATIC) > 0) {
+        if (tree.isStaticReference() || tree.isInstanceReference(types) ||
+                (currentMethodSym.flags() & STATIC) > 0) {
             flags |= (STATIC | NOOUTERTHIS);
         }
         JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.type);
@@ -3260,7 +3261,7 @@ public class Lower extends TreeTranslator {
         String str = "(" + tree.type.asElement().name + ") " + tree;  // toString()
         
         // convert method reference to new instance of anonymous class
-        if (tree.isStaticReference()) {
+        if (tree.isStaticReference() || tree.isInstanceReference(types)) {
             addFcmConstructor(tree, clsDef);
             addFcmSmiMethodReference(tree, null, clsDef);
             addFcmToString(tree, clsDef, str);
@@ -3287,6 +3288,10 @@ public class Lower extends TreeTranslator {
         JCExpression callExp = null;
         if (tree.isStaticReference()) {
             callExp = make.QualIdent(tree.convertFromMethodSymbol);
+        } else if (tree.isInstanceReference(types)) {
+            JCExpression target = refParams.head;
+            refParams = refParams.tail;
+            callExp = make.Select(target, tree.convertFromMethodSymbol);
         } else {
             callExp = make.Select(make.Ident(targetVarSym), tree.convertFromMethodSymbol);
         }

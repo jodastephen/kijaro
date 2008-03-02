@@ -2532,6 +2532,12 @@ public class Attr extends JCTree.Visitor {
         // resolve the target
         JCExpression siteTarget = (tree.target == null ? make.Ident(names._this) : tree.target);
         Type site = attribTree(siteTarget, env, TYP | VAR, Infer.anyPoly);
+        Symbol targetSym = null;
+        if (siteTarget instanceof JCFieldAccess) {
+            targetSym = ((JCFieldAccess) siteTarget).sym;
+        } else if (siteTarget instanceof JCIdent) {
+            targetSym = ((JCIdent) siteTarget).sym;
+        }
         
         // resolve the parameter types
         List<Type> paramTypes = attribParamTypes(tree.types, env);
@@ -2539,7 +2545,20 @@ public class Attr extends JCTree.Visitor {
         // validate that method exists and is accessible
         Symbol sym = rs.resolveQualifiedMethod(tree.pos(), env, site, tree.name, paramTypes, null);
         if (sym instanceof MethodSymbol) {
+            // static method requires a type as the target
+            if (site != null && targetSym != null && isType(targetSym) == false && (sym.flags() & STATIC) > 0) {
+                log.error(tree.pos(), "static.mref.not.on.type");
+                result = syms.errType;
+                return;
+            }
             tree.convertFromMethodSymbol = (MethodSymbol) sym;
+            // instance method requires an instance as the target, else it becomes an Instance Method Reference
+            if (site != null && isType(targetSym) && (sym.flags() & STATIC) == 0) {
+                MethodSymbol msym = (MethodSymbol) sym;
+                MethodType mtype = (MethodType) msym.asType().clone();
+                mtype.argtypes = mtype.argtypes.prepend(site);
+                sym = new MethodSymbol(msym.flags(), msym.name, mtype, msym.owner);
+            }
         }
         result = check(tree, sym.type, VAL, pkind, pt);
     }

@@ -1781,6 +1781,11 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public boolean isStaticReference() {
             return (convertFromMethodSymbol.flags_field & STATIC) != 0;
         }
+        public boolean isInstanceReference(Types types) {
+            return (convertFromMethodSymbol.flags_field & STATIC) == 0 &&
+                types.singleMethodInterfaceMethodSymbol(type).asType().argtypes.size() ==
+                    convertFromMethodSymbol.asType().argtypes.size() + 1;
+        }
         public List<JCExpression> getTypes() {
             return types;
         }
