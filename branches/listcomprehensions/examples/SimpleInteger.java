@@ -2,7 +2,8 @@
 import java.util.Arrays;
 
 /**
- * A simple integer test with mapping, filtering, and boxing/unboxing.
+ * A simple integer test with mapping, filtering, and boxing/unboxing. Run from
+ * a static method.
  */
 public class SimpleInteger {
     public static void main(String[] args) {

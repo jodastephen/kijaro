@@ -8,36 +8,55 @@ DEL *.class
 REM Compile utility class.
 ECHO Utils.java
 java -jar %COMPILER_JAR% %COMPILER_FLAGS% Utils.java
+pause
 
 ECHO SimpleInteger.java
 java -jar %COMPILER_JAR% %COMPILER_FLAGS% SimpleInteger.java && java SimpleInteger
+pause
+
+ECHO SimpleNotStatic.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% SimpleNotStatic.java && java SimpleNotStatic
+pause
 
 ECHO SimpleString.java
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% SimpleString.java && java SimpleString
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% SimpleString.java && java SimpleString
+pause
 
 ECHO ChangeType.java
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% ChangeType.java && java ChangeType
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% ChangeType.java && java ChangeType
+pause
 
 ECHO FreeStaticMember.java
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeStaticMember.java && java FreeStaticMember
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeStaticMember.java && java FreeStaticMember
+pause
 
 ECHO FreeStaticMethod.java
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeStaticMethod.java && java FreeStaticMethod
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeStaticMethod.java && java FreeStaticMethod
+pause
 
 ECHO NestedInForeach.java
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% NestedInForeach.java && java NestedInForeach
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% NestedInForeach.java && java NestedInForeach
+pause
 
 ECHO ArrayInput.java
 java -jar %COMPILER_JAR% %COMPILER_FLAGS% ArrayInput.java && java ArrayInput
+pause
+
+ECHO FreeLocal.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeLocal.java && java FreeLocal
+pause
+
+ECHO FreeLocalNotStatic.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeLocalNotStatic.java && java FreeLocalNotStatic
+pause
+
+ECHO FreeMember.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeMember.java && java FreeMember
+pause
+
+ECHO FreeMethod.java
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeMethod.java && java FreeMethod
+pause
 
 ECHO AnonClass.java (will fail to compile)
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% AnonClass.java && java AnonClass
-
-ECHO FreeLocal.java (will fail to compile)
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeLocal.java && java FreeLocal
-
-ECHO FreeMember.java (will fail to compile)
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeMember.java && java FreeMember
-
-ECHO FreeMethod.java (will fail to compile)
-REM java -jar %COMPILER_JAR% %COMPILER_FLAGS% FreeMethod.java && java FreeMethod
+java -jar %COMPILER_JAR% %COMPILER_FLAGS% AnonClass.java && java AnonClass
