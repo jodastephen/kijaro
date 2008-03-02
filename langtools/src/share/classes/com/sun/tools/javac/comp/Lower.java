@@ -3251,7 +3251,7 @@ public class Lower extends TreeTranslator {
         
         // create class
         long flags = FINAL | SYNTHETIC;
-        if (tree.isStaticReference()) {
+        if (tree.isStaticReference() || (currentMethodSym.flags() & STATIC) > 0) {
             flags |= (STATIC | NOOUTERTHIS);
         }
         JCClassDecl clsDef = makeFcmAnonymousInnerClass(flags, tree.type);

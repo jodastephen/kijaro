@@ -27,12 +27,17 @@ public class TestFCM {
             Method[] methods = TestFCM.class.getMethods();
             for (Method method : methods) {
                 if (method.getReturnType() == Void.TYPE &&
-                        method.getParameterTypes().length == 0 &&
                         method.getName().startsWith("test")) {
+                    Object[] methodArgs = null;
+                    if (method.getParameterTypes().length == 1) {
+                        methodArgs = new Object[] {"args"};
+                    } else {
+                        methodArgs = new Object[0];
+                    }
                     
                     TestFCM fcm = new TestFCM("Main");
                     try {
-                        method.invoke(fcm);
+                        method.invoke(fcm, methodArgs);
                         System.out.println("OK in " + method.getName());
                         ok++;
                     } catch (InvocationTargetException ex) {
@@ -199,6 +204,32 @@ public class TestFCM {
     }
 
     //-----------------------------------------------------------------------
+    public static void testBoundMethodReference_createInStatic_local() throws Exception {
+        TestFCM local = new TestFCM("Local");
+        
+        ActionListener lnr = local#handleInstanceAction(ActionEvent);
+        assert lnr != null;
+        local = null;  // local should be captured
+        ActionEvent input = new ActionEvent("src", 0, "testBoundMethodReference_createInStatic_local");
+        lnr.actionPerformed(input);
+        assert input == event;
+        assert output.equals("Local");
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testBoundMethodReference_createInStatic_local_ignoreArgs(String badArg) throws Exception {
+        TestFCM local = new TestFCM("Local");
+        
+        ActionListener lnr = local#handleInstanceAction(ActionEvent);
+        assert lnr != null;
+        local = null;  // local should be captured
+        ActionEvent input = new ActionEvent("src", 0, "testBoundMethodReference_createInStatic_local");
+        lnr.actionPerformed(input);
+        assert input == event;
+        assert output.equals("Local");
+    }
+
+    //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
     public void testStaticMethodReference() throws Exception {
@@ -237,6 +268,13 @@ public class TestFCM {
         assert factory != null;
         Integer expected = new Integer(6);
         assert expected.equals(factory.create("6"));
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testStaticMethodReference_createInStatic() throws Exception {
+        TestStringIntFactory factory = Integer#parseInt(String);
+        assert factory != null;
+        assert factory.create("6") == 6;
     }
 
     //-----------------------------------------------------------------------
@@ -624,6 +662,10 @@ public class TestFCM {
 
     interface TestIntegerFactory<T> {
         Integer create(T input);
+    }
+
+    interface ToString {
+        String run();
     }
 
     //-----------------------------------------------------------------------
