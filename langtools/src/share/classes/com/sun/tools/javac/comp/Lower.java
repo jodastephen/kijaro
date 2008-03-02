@@ -3143,6 +3143,7 @@ public class Lower extends TreeTranslator {
         // expression that evaluates to an Iterable or array.
         JCNewClass newClass = makeNewClass(iterableClsDef.type,
                 List.<JCExpression>of(translate(tree.expr)));
+        newClass.def = iterableClsDef;
 
         // Make sure we found a constructor.
         assert newClass.constructor.owner != null;
@@ -3158,7 +3159,7 @@ public class Lower extends TreeTranslator {
         Type realElemType = elemType != null ? elemType : iterableTypeArg;
 
         // Make the anonymous inner Iterator class for this comprehension.
-        long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
+        long flags = FINAL | SYNTHETIC;
         JCClassDecl iteratorClsDef = makeLcAnonymousInnerClass(flags, syms.iteratorType);
 
         // Add various instance fields.
@@ -3584,7 +3585,7 @@ public class Lower extends TreeTranslator {
             Type exprType, Type elemType) {
 
         // Make the anonymous inner Iterable class for this comprehension.
-        long flags = FINAL | SYNTHETIC | STATIC | NOOUTERTHIS;
+        long flags = FINAL | SYNTHETIC;
         JCClassDecl iterableClsDef = makeLcAnonymousInnerClass(flags, syms.iterableType);
 
         // Add an instance field for storing the passed-in Iterable or array.
@@ -3596,22 +3597,57 @@ public class Lower extends TreeTranslator {
         // Add the iterator() method required by Iterable interface.
         addLcIteratorMethod(iterableClsDef, iterableSym, iteratorClsDef, exprType, elemType);
 
+        // We had originally set the Iterator's enclosing type to be the
+        // current class, but this isn't right. We fix that up here by pointing
+        // the Iterator to the Iterable class we created.
+        ClassType iteratorClsType = (ClassType) iteratorClsDef.sym.type;
+        iteratorClsType.setEnclosingType(iterableClsDef.type);
+
         return iterableClsDef;
     }
 
     private JCClassDecl makeLcAnonymousInnerClass(long flags, Type ifaceType) {      // LISTCOMP
-        // XXX Combine this with Fcm's version.
-        ClassSymbol clsSym = makeEmptyClass(flags, currentClass);
+        // We're "in" the current method, but this isn't always true if we're making
+        // a nested inner class. We can fix that up later.
+        MethodSymbol owner = currentMethodSym;
 
-        // Need this to make it an anonymous inner class (owned by the method).
-        clsSym.owner = currentMethodSym;
+        // Create class symbol.
+        ClassSymbol clsSym = reader.defineClass(names.empty, owner);
+        clsSym.flatname = chk.localClassName(clsSym);
+        clsSym.sourcefile = currentClass.sourcefile;
+        clsSym.completer = null;
+        clsSym.members_field = new Scope(clsSym);
+        clsSym.flags_field = flags;
+
+        // Create class type.
         ClassType clsType = (ClassType) clsSym.type;
-
-        // Need this to make it an inner class (owned by the class).
-        clsType.setEnclosingType(currentClass.type);
+        if ((currentMethodSym.flags() & STATIC) != 0) {
+            // No enclosing type, the method is static.
+            clsType.setEnclosingType(Type.noType);
+        } else {
+            // Non-static method, be sure we have a this$n field.
+            clsType.setEnclosingType(currentClass.type);
+        }
+        clsType.supertype_field = syms.objectType;
         clsType.interfaces_field = List.<Type>of(ifaceType);
-        JCClassDecl clsDef = classDef(clsSym);
+
+        // Enter class symbol compiled table.
+        chk.compiled.put(clsSym.flatname, clsSym);
+
+        // Create class definition tree.
+        JCClassDecl clsDef = make.ClassDef(
+            make.Modifiers(flags), clsSym.name,
+            List.<JCTypeParameter>nil(),
+            null,
+            List.<JCExpression>of(make.Type(ifaceType)),
+            List.<JCTree>nil());
+        clsDef.sym = clsSym;
+        clsDef.type = clsSym.type;
         clsDef.implementing = List.<JCExpression>of(make.Type(ifaceType));
+
+        // Record this class so that classDef() will work later.
+        classdefs.put(clsSym, clsDef);
+
         return clsDef;
     }
 
@@ -3705,6 +3741,12 @@ public class Lower extends TreeTranslator {
         MethodSymbol iteratorMethodSym = new MethodSymbol(PUBLIC,
                 names.iterator, iteratorMethodType, iterableClsDef.type.tsym);
 
+        // We had originally set the Iterator's owner to be the current method, but this
+        // isn't right -- that would be the method around the entire comprehension. We
+        // fix that up here by pointing the Iterator to the iterator() method we're
+        // creating.
+        iteratorClsDef.sym.owner = iteratorMethodSym;
+
         JCExpression constructorParam;
         if (elemType == null) {
             // Call lc$mIterable.iterator().
@@ -3720,6 +3762,7 @@ public class Lower extends TreeTranslator {
         // Pass that to a new instance of our Iterator class.
         JCNewClass newClass = makeNewClass(iteratorClsDef.type,
                 List.<JCExpression>of(constructorParam));
+        newClass.def = iteratorClsDef;
 
         // Return the new instance.
         JCStatement returnStatement = make.Return(newClass);
