@@ -3300,7 +3300,7 @@ public class Lower extends TreeTranslator {
 
     private VarSymbol addFcmSmiMethodConstructor(JCMethodReference tree, JCClassDecl clsDef) {
         // create the target instance variable
-        VarSymbol varSym = new VarSymbol(Flags.PRIVATE & Flags.FINAL, names.target, tree.target.type, clsDef.sym);
+        VarSymbol varSym = new VarSymbol(PRIVATE | FINAL, names.target, tree.target.type, clsDef.sym);
         JCVariableDecl varDef = make.VarDef(varSym, null);
         clsDef.sym.members().enter(varSym);
         clsDef.defs = clsDef.defs.append(varDef);
