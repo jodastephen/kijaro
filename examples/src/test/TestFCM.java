@@ -229,6 +229,27 @@ public class TestFCM {
         assert output.equals("Local");
     }
 
+//    //-----------------------------------------------------------------------
+//    public void testBoundMethodReference_onMethodCall() throws Exception {
+//        ActionListener lnr = getThis()#handleInstanceAction(ActionEvent);
+//        assert lnr != null;
+//        ActionEvent input = new ActionEvent("src", 0, "testBoundMethodReference_This");
+//        lnr.actionPerformed(input);
+//        assert input == event;
+//        assert output.equals("Main");
+//    }
+
+    //-----------------------------------------------------------------------
+    public void testBoundMethodReference_onArrayAccess() throws Exception {
+        TestFCM[] array = new TestFCM[] {this};
+        ActionListener lnr = array[0]#handleInstanceAction(ActionEvent);
+        assert lnr != null;
+        ActionEvent input = new ActionEvent("src", 0, "testBoundMethodReference_This");
+        lnr.actionPerformed(input);
+        assert input == event;
+        assert output.equals("Main");
+    }
+
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
     //-----------------------------------------------------------------------
@@ -275,6 +296,30 @@ public class TestFCM {
         TestStringIntFactory factory = Integer#parseInt(String);
         assert factory != null;
         assert factory.create("6") == 6;
+    }
+
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    //-----------------------------------------------------------------------
+    public void testInstanceMethodReference() throws Exception {
+        TestStringIntFactory factory = String#length();
+        assert factory != null;
+        assert factory.create("Hi!") == 3;
+    }
+
+    //-----------------------------------------------------------------------
+    public void testInstanceMethodReference_returnBoxed() throws Exception {
+        TestStringIntegerFactory factory = String#length();
+        assert factory != null;
+        Integer expected = new Integer(3);
+        assert expected.equals(factory.create("Hi!"));
+    }
+
+    //-----------------------------------------------------------------------
+    public static void testInstanceMethodReference_createInStatic() throws Exception {
+        TestStringIntFactory factory = String#length();
+        assert factory != null;
+        assert factory.create("Hi!") == 3;
     }
 
     //-----------------------------------------------------------------------
@@ -666,6 +711,10 @@ public class TestFCM {
 
     interface ToString {
         String run();
+    }
+
+    private TestFCM getThis() {
+        return this;
     }
 
     //-----------------------------------------------------------------------
