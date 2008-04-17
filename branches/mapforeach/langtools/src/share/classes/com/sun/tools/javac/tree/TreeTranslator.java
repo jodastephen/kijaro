@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -182,7 +186,8 @@ public class TreeTranslator extends JCTree.Visitor {
     }
 
     public void visitForeachLoop(JCEnhancedForLoop tree) {
-        tree.var = translate(tree.var);
+        tree.var1 = translate(tree.var1);  // MAPFOREACH
+        tree.var2 = translate(tree.var2);
         tree.expr = translate(tree.expr);
         tree.body = translate(tree.body);
         result = tree;

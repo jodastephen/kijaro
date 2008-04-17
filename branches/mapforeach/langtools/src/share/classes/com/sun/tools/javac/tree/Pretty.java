@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -586,7 +590,11 @@ public class Pretty extends JCTree.Visitor {
     public void visitForeachLoop(JCEnhancedForLoop tree) {
         try {
             print("for (");
-            printExpr(tree.var);
+            printExpr(tree.var1);  // MAPFOREACH
+            if (tree.var2 != null) {
+                print(", ");
+                printExpr(tree.var2);
+            }
             print(" : ");
             printExpr(tree.expr);
             print(") ");

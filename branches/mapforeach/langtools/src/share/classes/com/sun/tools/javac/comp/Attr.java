@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -791,24 +795,48 @@ public class Attr extends JCTree.Visitor {
     public void visitForeachLoop(JCEnhancedForLoop tree) {
         Env<AttrContext> loopEnv =
             env.dup(env.tree, env.info.dup(env.info.scope.dup()));
-        attribStat(tree.var, loopEnv);
+        attribStat(tree.var1, loopEnv);
+        attribStat(tree.var2, loopEnv);
         Type exprType = types.upperBound(attribExpr(tree.expr, loopEnv));
         chk.checkNonVoid(tree.pos(), exprType);
-        Type elemtype = types.elemtype(exprType); // perhaps expr is an array?
-        if (elemtype == null) {
-            // or perhaps expr implements Iterable<T>?
-            Type base = types.asSuper(exprType, syms.iterableType.tsym);
+        if (tree.var2 != null) {  // MAPFOREACH
+            // map
+            Type keyType = null;
+            Type valueType = null;
+            Type base = types.asSuper(exprType, syms.mapType.tsym);
             if (base == null) {
                 log.error(tree.expr.pos(), "foreach.not.applicable.to.type");
-                elemtype = syms.errType;
+                keyType = syms.errType;
+                valueType = syms.errType;
             } else {
-                List<Type> iterableParams = base.allparams();
-                elemtype = iterableParams.isEmpty()
+                List<Type> mapParams = base.allparams();
+                keyType = mapParams.isEmpty()
                     ? syms.objectType
-                    : types.upperBound(iterableParams.head);
+                    : types.upperBound(mapParams.head);
+                valueType = mapParams.isEmpty()
+                    ? syms.objectType
+                    : types.upperBound(mapParams.tail.head);
             }
+            chk.checkType(tree.expr.pos(), keyType, tree.var1.sym.type);
+            chk.checkType(tree.expr.pos(), valueType, tree.var2.sym.type);
+        } else {
+            // iterable/array
+            Type elemtype = types.elemtype(exprType); // perhaps expr is an array?
+            if (elemtype == null) {
+                // or perhaps expr implements Iterable<T>?
+                Type base = types.asSuper(exprType, syms.iterableType.tsym);
+                if (base == null) {
+                    log.error(tree.expr.pos(), "foreach.not.applicable.to.type");
+                    elemtype = syms.errType;
+                } else {
+                    List<Type> iterableParams = base.allparams();
+                    elemtype = iterableParams.isEmpty()
+                        ? syms.objectType
+                        : types.upperBound(iterableParams.head);
+                }
+            }
+            chk.checkType(tree.expr.pos(), elemtype, tree.var1.sym.type);
         }
-        chk.checkType(tree.expr.pos(), elemtype, tree.var.sym.type);
         loopEnv.tree = tree; // before, we were not in loop!
         attribStat(tree.body, loopEnv);
         loopEnv.info.scope.leave();

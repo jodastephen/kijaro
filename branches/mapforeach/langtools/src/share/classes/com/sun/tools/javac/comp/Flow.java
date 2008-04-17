@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -862,7 +866,10 @@ public class Flow extends TreeScanner {
     }
 
     public void visitForeachLoop(JCEnhancedForLoop tree) {
-        visitVarDef(tree.var);
+        visitVarDef(tree.var1);
+        if (tree.var2 != null) {  // MAPFOREACH
+            visitVarDef(tree.var2);
+        }
 
         ListBuffer<PendingExit> prevPendingExits = pendingExits;
         boolean prevLoopPassTwo = loopPassTwo;
@@ -871,7 +878,10 @@ public class Flow extends TreeScanner {
         Bits initsStart = inits.dup();
         Bits uninitsStart = uninits.dup();
 
-        letInit(tree.pos(), tree.var.sym);
+        letInit(tree.pos(), tree.var1.sym);
+        if (tree.var2 != null) {  // MAPFOREACH
+            letInit(tree.pos(), tree.var2.sym);
+        }
         pendingExits = new ListBuffer<PendingExit>();
         do {
             Bits uninitsEntry = uninits.dup();

@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -498,7 +502,8 @@ public class TransTypes extends TreeTranslator {
     }
 
     public void visitForeachLoop(JCEnhancedForLoop tree) {
-        tree.var = translate(tree.var, null);
+        tree.var1 = translate(tree.var1, null);  // MAPFOREACH
+        tree.var2 = translate(tree.var2, null);
         Type iterableType = tree.expr.type;
         tree.expr = translate(tree.expr, erasure(tree.expr.type));
         if (types.elemtype(tree.expr.type) == null)

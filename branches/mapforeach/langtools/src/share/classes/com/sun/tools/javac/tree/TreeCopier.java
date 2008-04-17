@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -177,10 +181,11 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
 
     public JCTree visitEnhancedForLoop(EnhancedForLoopTree node, P p) {
         JCEnhancedForLoop t = (JCEnhancedForLoop) node;
-        JCVariableDecl var = copy(t.var, p);
+        JCVariableDecl var1 = copy(t.var1, p);  // MAPFOREACH
+        JCVariableDecl var2 = copy(t.var2, p);
         JCExpression expr = copy(t.expr, p);
         JCStatement body = copy(t.body, p);
-        return M.at(t.pos).ForeachLoop(var, expr, body);
+        return M.at(t.pos).ForeachLoop(var1, var2, expr, body);
     }
 
     public JCTree visitForLoop(ForLoopTree node, P p) {

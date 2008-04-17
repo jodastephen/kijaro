@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 2001-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -120,7 +124,8 @@ public class TreeScanner extends Visitor {
     }
 
     public void visitForeachLoop(JCEnhancedForLoop tree) {
-        scan(tree.var);
+        scan(tree.var1);  // MAPFOREACH
+        scan(tree.var2);
         scan(tree.expr);
         scan(tree.body);
     }
