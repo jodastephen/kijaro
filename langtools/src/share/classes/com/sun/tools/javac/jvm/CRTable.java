@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 2001-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -290,7 +294,8 @@ implements CRTFlags {
 
         public void visitForeachLoop(JCEnhancedForLoop tree) {
             SourceRange sr = new SourceRange(startPos(tree), endPos(tree));
-            sr.mergeWith(csp(tree.var));
+            sr.mergeWith(csp(tree.var1));  // MAPFOREACH
+            sr.mergeWith(csp(tree.var2));
             sr.mergeWith(csp(tree.expr));
             sr.mergeWith(csp(tree.body));
             result = sr;

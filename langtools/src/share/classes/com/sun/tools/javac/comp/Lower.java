@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -2808,10 +2812,13 @@ public class Lower extends TreeTranslator {
 
     /** Translate away the foreach loop.  */
     public void visitForeachLoop(JCEnhancedForLoop tree) {
-        if (types.elemtype(tree.expr.type) == null)
+        if (tree.var2 != null) {  // MAPFOREACH
+            System.out.println("GENERATE");
+        } else if (types.elemtype(tree.expr.type) == null) {
             visitIterableForeachLoop(tree);
-        else
+        } else {
             visitArrayForeachLoop(tree);
+        }
     }
         // where
         /**
@@ -2863,7 +2870,7 @@ public class Lower extends TreeTranslator {
 
             Type elemtype = types.elemtype(tree.expr.type);
             JCStatement loopvarinit = make.
-                VarDef(tree.var.sym,
+                VarDef(tree.var1.sym,
                        make.
                        Indexed(make.Ident(arraycache), make.Ident(index)).
                        setType(elemtype));
@@ -2943,7 +2950,7 @@ public class Lower extends TreeTranslator {
             JCExpression vardefinit = make.App(make.Select(make.Ident(itvar), next));
             if (iteratorTarget != syms.objectType)
                 vardefinit = make.TypeCast(iteratorTarget, vardefinit);
-            JCVariableDecl indexDef = make.VarDef(tree.var.sym, vardefinit);
+            JCVariableDecl indexDef = make.VarDef(tree.var1.sym, vardefinit);
             JCBlock body = make.Block(0, List.of(indexDef, tree.body));
             result = translate(make.
                 ForLoop(List.of(init),

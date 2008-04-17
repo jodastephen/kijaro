@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -879,11 +883,13 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      * The enhanced for loop.
      */
     public static class JCEnhancedForLoop extends JCStatement implements EnhancedForLoopTree {
-        public JCVariableDecl var;
+        public JCVariableDecl var1;  // MAPFOREACH
+        public JCVariableDecl var2;
         public JCExpression expr;
         public JCStatement body;
-        protected JCEnhancedForLoop(JCVariableDecl var, JCExpression expr, JCStatement body) {
-            this.var = var;
+        protected JCEnhancedForLoop(JCVariableDecl var1, JCVariableDecl var2, JCExpression expr, JCStatement body) {
+            this.var1 = var1;
+            this.var2 = var2;
             this.expr = expr;
             this.body = body;
         }
@@ -891,7 +897,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void accept(Visitor v) { v.visitForeachLoop(this); }
 
         public Kind getKind() { return Kind.ENHANCED_FOR_LOOP; }
-        public JCVariableDecl getVariable() { return var; }
+        public JCVariableDecl getVariable() { return var1; }
         public JCExpression getExpression() { return expr; }
         public JCStatement getStatement() { return body; }
         @Override
@@ -2073,7 +2079,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
                         JCExpression cond,
                         List<JCExpressionStatement> step,
                         JCStatement body);
-        JCEnhancedForLoop ForeachLoop(JCVariableDecl var, JCExpression expr, JCStatement body);
+        JCEnhancedForLoop ForeachLoop(JCVariableDecl var1, JCVariableDecl var2, JCExpression expr, JCStatement body);  // MAPFOREACH
         JCLabeledStatement Labelled(Name label, JCStatement body);
         JCSwitch Switch(JCExpression selector, List<JCCase> cases);
         JCCase Case(JCExpression pat, List<JCStatement> stats);

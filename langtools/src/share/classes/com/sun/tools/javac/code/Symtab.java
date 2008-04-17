@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -132,6 +136,7 @@ public class Symtab {
     public final Type annotationType;
     public final TypeSymbol enumSym;
     public final Type listType;
+    public final Type mapType;  // MAPFOREACH
     public final Type collectionsType;
     public final Type comparableType;
     public final Type arraysType;
@@ -370,6 +375,7 @@ public class Symtab {
                                             List.<Type>nil(), methodClass),
                              enumSym);
         listType = enterClass("java.util.List");
+        mapType = enterClass("java.util.Map");  // MAPFOREACH
         collectionsType = enterClass("java.util.Collections");
         comparableType = enterClass("java.lang.Comparable");
         arraysType = enterClass("java.util.Arrays");

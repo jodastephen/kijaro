@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -1544,7 +1548,7 @@ public class Parser {
                 } else {
                     JCExpression t = type();
                     stats.appendList(variableDeclarators(mods, t,
-                                                         new ListBuffer<JCStatement>()));
+                                                         new ListBuffer<JCStatement>(), false));  // MAPFOREACH
                     // A "LocalVariableDeclarationStatement" subsumes the terminating semicolon
                     storeEnd(stats.elems.last(), S.endPos());
                     accept(SEMI);
@@ -1590,7 +1594,7 @@ public class Parser {
                     JCModifiers mods = F.at(Position.NOPOS).Modifiers(0);
                     F.at(pos);
                     stats.appendList(variableDeclarators(mods, t,
-                                                         new ListBuffer<JCStatement>()));
+                                                         new ListBuffer<JCStatement>(), false));  // MAPFOREACH
                     // A "LocalVariableDeclarationStatement" subsumes the terminating semicolon
                     storeEnd(stats.elems.last(), S.endPos());
                     accept(SEMI);
@@ -1664,7 +1668,21 @@ public class Parser {
                 JCExpression expr = expression();
                 accept(RPAREN);
                 JCStatement body = statement();
-                return F.at(pos).ForeachLoop(var, expr, body);
+                return F.at(pos).ForeachLoop(var, null, expr, body);
+            } else if (inits.length() == 2 &&  // MAPFOREACH
+                    inits.head.getTag() == JCTree.VARDEF &&
+                    inits.tail.head.getTag() == JCTree.VARDEF &&
+                    ((JCVariableDecl) inits.head).init == null &&
+                    ((JCVariableDecl) inits.tail.head).init == null &&
+                    S.token() == COLON) {
+                checkForeach();
+                JCVariableDecl var1 = (JCVariableDecl) inits.head;
+                JCVariableDecl var2 = (JCVariableDecl) inits.tail.head;
+                accept(COLON);
+                JCExpression expr = expression();
+                accept(RPAREN);
+                JCStatement body = statement();
+                return F.at(pos).ForeachLoop(var1, var2, expr, body);
             } else {
                 accept(SEMI);
                 JCExpression cond = S.token() == SEMI ? null : expression();
@@ -1870,12 +1888,12 @@ public class Parser {
         ListBuffer<JCStatement> stats = lb();
         int pos = S.pos();
         if (S.token() == FINAL || S.token() == MONKEYS_AT) {
-            return variableDeclarators(optFinal(0), type(), stats).toList();
+            return variableDeclarators(optFinal(0), type(), stats, true).toList();  // MAPFOREACH
         } else {
             JCExpression t = term(EXPR | TYPE);
             if ((lastmode & TYPE) != 0 &&
                 (S.token() == IDENTIFIER || S.token() == ASSERT || S.token() == ENUM))
-                return variableDeclarators(modifiersOpt(), t, stats).toList();
+                return variableDeclarators(modifiersOpt(), t, stats, true).toList();  // MAPFOREACH
             else
                 return moreStatementExpressions(pos, t, stats).toList();
         }
@@ -2057,9 +2075,10 @@ public class Parser {
      */
     public <T extends ListBuffer<? super JCVariableDecl>> T variableDeclarators(JCModifiers mods,
                                                                          JCExpression type,
-                                                                         T vdefs)
+                                                                         T vdefs,
+                                                                         boolean couldBeParams)  // MAPFOREACH
     {
-        return variableDeclaratorsRest(S.pos(), mods, type, ident(), false, null, vdefs);
+        return variableDeclaratorsRest(S.pos(), mods, type, ident(), false, null, vdefs, couldBeParams);
     }
 
     /** VariableDeclaratorsRest = VariableDeclaratorRest { "," VariableDeclarator }
@@ -2074,14 +2093,32 @@ public class Parser {
                                                                      Name name,
                                                                      boolean reqInit,
                                                                      String dc,
-                                                                     T vdefs)
+                                                                     T vdefs,
+                                                                     boolean couldBeParams)
     {
         vdefs.append(variableDeclaratorRest(pos, mods, type, name, reqInit, dc));
+        boolean isParams = false;
         while (S.token() == COMMA) {
             // All but last of multiple declarators subsume a comma
             storeEnd((JCTree)vdefs.elems.last(), S.endPos());
             S.nextToken();
-            vdefs.append(variableDeclarator(mods, type, reqInit, dc));
+            if (isParams || couldBeParams) {  // MAPFOREACH
+                JCModifiers newMods = optFinal(Flags.PARAMETER);
+                JCExpression newType = type();
+                if (isParams || S.token() == IDENTIFIER) {
+                    JCVariableDecl varDecl = variableDeclaratorId(newMods, newType);
+                    attach(varDecl, dc);
+                    vdefs.append(varDecl);
+                    isParams = true;
+                } else {
+                    couldBeParams = false;
+                    JCVariableDecl varDecl = toP(F.at(pos).VarDef(mods, ((JCIdent) newType).name, type, null));
+                    attach(varDecl, dc);
+                    vdefs.append(varDecl);
+                }
+            } else {
+                vdefs.append(variableDeclarator(mods, type, reqInit, dc));
+            }
         }
         return vdefs;
     }
@@ -2518,7 +2555,7 @@ public class Parser {
                     } else if (!isVoid && typarams.isEmpty()) {
                         List<JCTree> defs =
                             variableDeclaratorsRest(pos, mods, type, name, isInterface, dc,
-                                                    new ListBuffer<JCTree>()).toList();
+                                                    new ListBuffer<JCTree>(), false).toList();  // MAPFOREACH
                         storeEnd(defs.last(), S.endPos());
                         accept(SEMI);
                         return defs;

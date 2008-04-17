@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -223,8 +227,8 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
-    public JCEnhancedForLoop ForeachLoop(JCVariableDecl var, JCExpression expr, JCStatement body) {
-        JCEnhancedForLoop tree = new JCEnhancedForLoop(var, expr, body);
+    public JCEnhancedForLoop ForeachLoop(JCVariableDecl var1, JCVariableDecl var2, JCExpression expr, JCStatement body) {  // MAPFOREACH
+        JCEnhancedForLoop tree = new JCEnhancedForLoop(var1, var2, expr, body);
         tree.pos = pos;
         return tree;
     }
