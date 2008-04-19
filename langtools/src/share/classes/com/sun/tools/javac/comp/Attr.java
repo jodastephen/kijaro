@@ -796,7 +796,9 @@ public class Attr extends JCTree.Visitor {
         Env<AttrContext> loopEnv =
             env.dup(env.tree, env.info.dup(env.info.scope.dup()));
         attribStat(tree.var1, loopEnv);
-        attribStat(tree.var2, loopEnv);
+        if (tree.var2 != null) {  // MAPFOREACH
+            attribStat(tree.var2, loopEnv);
+        }
         Type exprType = types.upperBound(attribExpr(tree.expr, loopEnv));
         chk.checkNonVoid(tree.pos(), exprType);
         if (tree.var2 != null) {  // MAPFOREACH

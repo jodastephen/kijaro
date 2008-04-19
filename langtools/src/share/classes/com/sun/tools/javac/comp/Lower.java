@@ -2813,7 +2813,7 @@ public class Lower extends TreeTranslator {
     /** Translate away the foreach loop.  */
     public void visitForeachLoop(JCEnhancedForLoop tree) {
         if (tree.var2 != null) {  // MAPFOREACH
-            System.out.println("GENERATE");
+            visitMapIterableForeachLoop(tree);
         } else if (types.elemtype(tree.expr.type) == null) {
             visitIterableForeachLoop(tree);
         } else {
@@ -2957,6 +2957,82 @@ public class Lower extends TreeTranslator {
                         cond,
                         List.<JCExpressionStatement>nil(),
                         body));
+            patchTargets(body, tree, result);
+        }
+
+        /**
+         * A statement of the form
+         *
+         * <pre>
+         *     for ( K k, V v : map ) stmt ;
+         * </pre>
+         *
+         * (where map implements Map<? extends K, ? extends V>) gets translated to
+         *
+         * <pre>
+         *     for ( Iterator<? extends K> #i = map.keySet().iterator(); #i.hasNext(); ) {
+         *         K k = (K) #i.next();
+         *         V v = (V) map.get(k);
+         *         stmt;
+         *     }
+         * </pre>
+         *
+         * where #i is a freshly named synthetic local variable.
+         */
+        private void visitMapIterableForeachLoop(JCEnhancedForLoop tree) {
+            make_at(tree.expr.pos());
+            Type mapType = types.asSuper(types.upperBound(tree.expr.type), syms.mapType.tsym);
+            
+            Type keyType = syms.objectType;
+            if (mapType.getTypeArguments().nonEmpty()) {
+                keyType = types.erasure(mapType.getTypeArguments().head);
+            }
+            Type valueType = syms.objectType;
+            if (mapType.getTypeArguments().nonEmpty()) {
+                valueType = types.erasure(mapType.getTypeArguments().tail.head);
+            }
+            
+            Type eType = tree.expr.type;
+            tree.expr.type = types.erasure(eType);
+            if (eType.tag == TYPEVAR && eType.getUpperBound().isCompound()) {
+                tree.expr = make.TypeCast(types.erasure(mapType), tree.expr);
+            }
+            
+            Symbol keySetSym = lookupMethod(tree.expr.pos(),
+                    names.keySet, types.erasure(syms.mapType), List.<Type>nil());
+            Symbol iteratorSym = lookupMethod(tree.expr.pos(),
+                    names.iterator, types.erasure(syms.iterableType), List.<Type>nil());
+            Name iteratorVariableName = names.fromString("i" + target.syntheticNameChar());
+            VarSymbol itvar = new VarSymbol(0, iteratorVariableName,
+                    types.erasure(iteratorSym.type.getReturnType()), currentMethodSym);
+            JCMethodInvocation callKeySetTree = make.App(make.Select(tree.expr, keySetSym));
+            JCMethodInvocation callIteratorTree = make.App(make.Select(callKeySetTree, iteratorSym));
+            JCStatement initTree = make.VarDef(itvar, callIteratorTree);
+            
+            Symbol hasNextSym = lookupMethod(tree.expr.pos(),
+                    names.hasNext, itvar.type, List.<Type>nil());
+            JCMethodInvocation condTree = make.App(make.Select(make.Ident(itvar), hasNextSym));
+            
+            Symbol nextSym = lookupMethod(tree.expr.pos(),
+                    names.next, itvar.type, List.<Type>nil());
+            JCExpression keyInitTree = make.App(make.Select(make.Ident(itvar), nextSym));
+            if (keyType != syms.objectType) {
+                keyInitTree = make.TypeCast(keyType, keyInitTree);
+            }
+            JCVariableDecl keyDefTree = make.VarDef(tree.var1.sym, keyInitTree);
+            
+            Symbol getSym = lookupMethod(tree.expr.pos(),
+                    names.get, types.erasure(syms.mapType), List.of(syms.objectType));
+            JCExpression valueInitTree = make.App(make.Select(tree.expr, getSym), List.of(make.Ident(keyDefTree)));
+            if (valueType != syms.objectType) {
+                valueInitTree = make.TypeCast(valueType, valueInitTree);
+            }
+            JCVariableDecl valueDefTree = make.VarDef(tree.var2.sym, valueInitTree);
+            
+            JCBlock body = make.Block(0, List.of(keyDefTree, valueDefTree, tree.body));
+            JCForLoop forLoopTree = make.ForLoop(
+                    List.of(initTree), condTree, List.<JCExpressionStatement>nil(), body);
+            result = translate(forLoopTree);
             patchTargets(body, tree, result);
         }
 

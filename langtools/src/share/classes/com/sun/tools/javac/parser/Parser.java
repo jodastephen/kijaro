@@ -35,6 +35,7 @@ import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
+
 import static com.sun.tools.javac.util.ListBuffer.lb;
 
 import com.sun.tools.javac.tree.JCTree.*;
@@ -1656,12 +1657,12 @@ public class Parser {
         }
         case FOR: {
             S.nextToken();
-            accept(LPAREN);
+            accept(LPAREN);  // MAPFOREACH
             List<JCStatement> inits = S.token() == SEMI ? List.<JCStatement>nil() : forInit();
             if (inits.length() == 1 &&
-                inits.head.getTag() == JCTree.VARDEF &&
-                ((JCVariableDecl) inits.head).init == null &&
-                S.token() == COLON) {
+                    inits.head.getTag() == JCTree.VARDEF &&
+                    ((JCVariableDecl) inits.head).init == null &&
+                    S.token() == COLON) {
                 checkForeach();
                 JCVariableDecl var = (JCVariableDecl)inits.head;
                 accept(COLON);
@@ -1684,6 +1685,18 @@ public class Parser {
                 JCStatement body = statement();
                 return F.at(pos).ForeachLoop(var1, var2, expr, body);
             } else {
+                if (inits.length() > 1 && inits.head.getTag() == JCTree.VARDEF) {
+                    JCVariableDecl first = (JCVariableDecl) inits.head;
+                    JCExpression varType = first.vartype;
+                    for (JCStatement stat : inits.tail) {
+                        if (stat.getTag() == JCTree.VARDEF) {
+                            JCExpression loopType = ((JCVariableDecl) stat).vartype;
+                            if (loopType != varType) {
+                                return toP(F.Exec(syntaxError("forloop.mixed.types")));
+                            }
+                        }
+                    }
+                }
                 accept(SEMI);
                 JCExpression cond = S.token() == SEMI ? null : expression();
                 accept(SEMI);
@@ -2105,16 +2118,19 @@ public class Parser {
             if (isParams || couldBeParams) {  // MAPFOREACH
                 JCModifiers newMods = optFinal(Flags.PARAMETER);
                 JCExpression newType = type();
-                if (isParams || S.token() == IDENTIFIER) {
+                if (isParams || S.token() == IDENTIFIER) {  // second identifier means newType really is a type
                     JCVariableDecl varDecl = variableDeclaratorId(newMods, newType);
                     attach(varDecl, dc);
                     vdefs.append(varDecl);
                     isParams = true;
-                } else {
+                } else if (newType instanceof JCIdent) {
                     couldBeParams = false;
-                    JCVariableDecl varDecl = toP(F.at(pos).VarDef(mods, ((JCIdent) newType).name, type, null));
-                    attach(varDecl, dc);
-                    vdefs.append(varDecl);
+                    Name itemName = ((JCIdent) newType).name;
+                    vdefs.append(variableDeclaratorRest(S.pos(), mods, type, itemName, reqInit, dc));
+                } else {
+                    // error
+                    couldBeParams = false;
+                    accept(IDENTIFIER);
                 }
             } else {
                 vdefs.append(variableDeclarator(mods, type, reqInit, dc));

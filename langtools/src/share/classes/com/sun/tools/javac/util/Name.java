@@ -1,4 +1,8 @@
 /*
+ * Changes for MapForEach implementation
+ * Copyright 2008 Stephen Colebourne.  All Rights Reserved.
+ */
+/*
  * Copyright 1999-2006 Sun Microsystems, Inc.  All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -501,6 +505,8 @@ public class Name implements javax.lang.model.element.Name {
             initCause = fromString("initCause");
             values = fromString("values");
             iterator = fromString("iterator");
+            keySet = fromString("keySet");  // MAPFOREACH
+            get = fromString("get");  // MAPFOREACH
             hasNext = fromString("hasNext");
             next = fromString("next");
             AnnotationDefault = fromString("AnnotationDefault");
@@ -635,6 +641,8 @@ public class Name implements javax.lang.model.element.Name {
         public final Name initCause;
         public final Name values;
         public final Name iterator;
+        public final Name keySet;  // MAPFOREACH
+        public final Name get;  // MAPFOREACH
         public final Name hasNext;
         public final Name next;
         public final Name AnnotationDefault;
