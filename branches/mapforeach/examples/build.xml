@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="langtools" default="compile">
+
+  <property name="javac.jar" value="../kijaro/langtools/dist/lib/javac.jar" />
+
+  <target name="compile">
+  	<mkdir dir="bin" />
+    <java fork="true" jar="${javac.jar}" >
+      <jvmarg line="-Xbootclasspath/p:${javac.jar}" />
+      <arg line="-d bin src/*.java" />
+    </java>
+  </target>
+
+</project>

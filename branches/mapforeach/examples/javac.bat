@@ -1,0 +1,1 @@
+C:\java\jdk1.6.0\bin\java.exe -Xbootclasspath/p:../langtools/dist/lib/javac.jar -ea:com.sun.tools -jar ../langtools/dist/lib/javac.jar -d bin src/*.java
