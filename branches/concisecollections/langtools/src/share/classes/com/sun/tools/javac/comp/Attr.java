@@ -1733,11 +1733,50 @@ public class Attr extends JCTree.Visitor {
     public void visitIndexed(JCArrayAccess tree) {
         Type owntype = syms.errType;
         Type atype = attribExpr(tree.indexed, env);
-        attribExpr(tree.index, env, syms.intType);
-        if (types.isArray(atype))
-            owntype = types.elemtype(atype);
-        else if (atype.tag != ERROR)
-            log.error(tree.pos(), "array.req.but.found", atype);
+
+        final Type eMapType = types.asSuper( atype, syms.mapType.tsym );
+        final Type eListType = types.asSuper( atype, syms.listType.tsym );
+        if (eMapType != null && eListType != null) {
+          // TODO @shams error something which implements both List and Map
+          // maybe more advanced handling
+
+        } else if(eMapType != null) {
+          // atype is an instance of a java.util.Map
+          // This syntax is for accessing a java.util.Map
+          final List<Type> eMapParams = eMapType.allparams();
+          final Type eMapKeyType = eMapParams.get( 0 );
+          final Type eMapValueType = eMapParams.get( 1 );
+
+          // Validate the index expression to the Key Type
+          attribExpr( tree.index, env, eMapKeyType );
+
+          // Set the Value type as the owntype
+          // fortunately both map.put() and map.get() return type is V :)
+          owntype = eMapValueType;
+
+        } else if(eListType != null) {
+          // atype is an instance of a java.util.Map
+          // This syntax is for accessing a java.util.Map
+          final List<Type> eListParams = eListType.allparams();
+          final Type eListElementType = eListParams.get( 0 );
+
+          // Validate the index expression to the int Type
+          attribExpr( tree.index, env, syms.intType );
+
+          // Set the Element type as the owntype
+          // fortunately both list.set() and map.get() return type is E :)
+          owntype = eListElementType;
+
+        } else  if (types.isArray(atype)) {
+
+          attribExpr(tree.index, env, syms.intType);
+
+          owntype = types.elemtype(atype);
+
+        } else if (atype.tag != ERROR) {
+          // TODO @shams Redefine error message for Array/Map
+          log.error(tree.pos(), "array.req.but.found", atype);
+        }
         if ((pkind & VAR) == 0) owntype = capture(owntype);
         result = check(tree, owntype, VAR, pkind, pt);
     }

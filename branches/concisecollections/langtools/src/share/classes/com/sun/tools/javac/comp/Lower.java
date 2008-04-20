@@ -2625,27 +2625,111 @@ public class Lower extends TreeTranslator {
         result = ((expr == tree.expr) ? tree : expr);
     }
 
-    public void visitIndexed(JCArrayAccess tree) {
-        tree.indexed = translate(tree.indexed);
-        tree.index = translate(tree.index, syms.intType);
-        result = tree;
+  public void visitIndexed( JCArrayAccess tree ) {
+    tree.indexed = translate( tree.indexed );
+
+    final Type eMapType = types.asSuper( tree.indexed.type, syms.mapType.tsym );
+    final Type eListType = types.asSuper( tree.indexed.type, syms.listType.tsym );
+    if ( eMapType != null ) {
+      // a java.util.Map accessor
+      final Type eMapKeyType = eMapType.getTypeArguments().get( 0 );
+      final Type eMapValueType = eMapType.getTypeArguments().get( 1 );
+
+      tree.index = translate( tree.index, eMapKeyType );
+      // replace the accessor with a call to <indexed-map>.get(<index>);
+      // this might be an incorrect replacement, we might need to correct to
+      // <indexed-map>.put(<index>, value) later
+      make_at( tree.indexed.pos() );
+      List<Type> eMethodParams = List.<Type>nil().append( eMapKeyType );
+      Symbol eGetSymbol = lookupMethod( tree.indexed.pos(), names.get, eMapType, eMethodParams );
+      List<JCExpression> eMethodArgs = List.<JCExpression>nil().append( tree.index );
+      JCMethodInvocation eInvocation = make.App( make.Select( tree.indexed, eGetSymbol ), eMethodArgs );
+      eInvocation.setType( eMapValueType );
+
+      result = eInvocation;
+    } else if ( eListType != null ) {
+      // a java.util.List accessor
+      final Type eListElementType = eListType.getTypeArguments().get( 0 );
+
+      tree.index = translate( tree.index, syms.intType );
+      // replace the accessor with a call to <indexed-list>.get(<index>);
+      // this might be an incorrect replacement, we might need to correct to
+      // <indexed-list>.set(<index>, value) later
+      make_at( tree.indexed.pos() );
+      List<Type> eMethodParams = List.<Type>nil().append( syms.intType );
+      Symbol eGetSymbol = lookupMethod( tree.indexed.pos(), names.get, eListType, eMethodParams );
+      List<JCExpression> eMethodArgs = List.<JCExpression>nil().append( tree.index );
+      JCMethodInvocation eInvocation = make.App( make.Select( tree.indexed, eGetSymbol ), eMethodArgs );
+      eInvocation.setType( eListElementType );
+
+      result = eInvocation;
+    } else {
+      // An array accessor, index must be an int
+      tree.index = translate( tree.index, syms.intType );
+      result = tree;
     }
 
-    public void visitAssign(JCAssign tree) {
-        tree.lhs = translate(tree.lhs, tree);
-        tree.rhs = translate(tree.rhs, tree.lhs.type);
+  }
 
-        // If translated left hand side is an Apply, we are
-        // seeing an access method invocation. In this case, append
-        // right hand side as last argument of the access method.
-        if (tree.lhs.getTag() == JCTree.APPLY) {
-            JCMethodInvocation app = (JCMethodInvocation)tree.lhs;
-            app.args = List.of(tree.rhs).prependList(app.args);
-            result = app;
-        } else {
-            result = tree;
-        }
+  public void visitAssign( JCAssign tree ) {
+    tree.lhs = translate( tree.lhs, tree );
+    tree.rhs = translate( tree.rhs, tree.lhs.type );
+
+    // If translated left hand side is an Apply, we are seeing
+    // 1) an access method invocation. In this case, append right
+    // hand side as last argument of the access method, OR
+    // 2) <Map>.get() invocation which was incorrectly translated
+    // instead of a <Map>.put()
+    if ( tree.lhs.getTag() == JCTree.APPLY ) {
+      JCMethodInvocation app = (JCMethodInvocation) tree.lhs;
+
+      // Find whether the left hand side is a map.get invocation
+      boolean eMapGet = false;
+      Type eMapType = null;
+      boolean eListGet = false;
+      Type eListType = null;
+      JCFieldAccess eFieldAccess = null;
+      if ( app.meth != null && app.meth.getTag() == JCTree.SELECT ) {
+        eFieldAccess = (JCFieldAccess) app.meth;
+        eMapType = types.asSuper( eFieldAccess.selected.type, syms.mapType.tsym );
+        eMapGet = ( eMapType != null ) && ( eFieldAccess.name == names.get );
+        eListType = types.asSuper( eFieldAccess.selected.type, syms.listType.tsym );
+        eListGet = ( eListType != null ) && ( eFieldAccess.name == names.get );
+      }
+
+      if ( eMapGet ) {
+        // replace the map.get() with map.put()
+        make_at( tree.lhs.pos() );
+        // eMapType && eFieldAccess will not be null as they are
+        // included in clause for eMapGet to be true
+        List<Type> eMethodParams = eMapType.getTypeArguments();
+        Symbol put = lookupMethod( tree.lhs.pos(), names.put, eMapType, eMethodParams );
+        List<JCExpression> args = List.<JCExpression> nil().append( app.args.get( 0 ) ).append( tree.rhs );
+        JCMethodInvocation eInvocation = make.App( make.Select( eFieldAccess.selected, put ), args );
+        eInvocation.setType( eMapType.getTypeArguments().get( 1 ) );
+
+        result = eInvocation;
+      } else if ( eListGet ) {
+        // replace the list.get() with list.set()
+        make_at( tree.lhs.pos() );
+        // eListType && eFieldAccess will not be null as they are
+        // included in clause for eListGet to be true
+        List<Type> eMethodParams = List.<Type>nil().append( syms.intType ).append( eListType.getTypeArguments().get( 0 ) );
+        Symbol set = lookupMethod( tree.lhs.pos(), names.set, eListType, eMethodParams);
+        List<JCExpression> args = List.<JCExpression> nil().append( app.args.get( 0 ) ).append( tree.rhs );
+        JCMethodInvocation eInvocation = make.App( make.Select( eFieldAccess.selected, set ), args );
+        eInvocation.setType( eListType.getTypeArguments().get( 0 ) );
+
+        result = eInvocation;
+      } else {
+        // append right hand side as last argument of the access method
+        app.args = List.of( tree.rhs ).prependList( app.args );
+        result = app;
+      }
+    } else {
+      result = tree;
     }
+  }
 
     public void visitAssignop(final JCAssignOp tree) {
         if (!tree.lhs.type.isPrimitive() &&
