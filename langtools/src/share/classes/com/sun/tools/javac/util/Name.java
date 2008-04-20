@@ -511,6 +511,12 @@ public class Name implements javax.lang.model.element.Name {
             getDeclaringClass = fromString("getDeclaringClass");
             ex = fromString("ex");
             finalize = fromString("finalize");
+            // Names used to determine get method for java.util.Map and java.util.List
+            get = fromString("get");
+            // Name used to determine set method for java.util.Map
+            put = fromString("put");
+            // Name used to determine set method for java.util.List
+            set = fromString("set");
         }
 
         public Table() {
@@ -645,6 +651,10 @@ public class Name implements javax.lang.model.element.Name {
         public final Name getDeclaringClass;
         public final Name ex;
         public final Name finalize;
+        // Names used to determine get, put, and set methods
+        public final Name get;
+        public final Name put;
+        public final Name set;
     }
 
     public boolean isEmpty() {

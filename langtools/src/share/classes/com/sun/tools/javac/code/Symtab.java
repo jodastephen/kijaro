@@ -144,6 +144,7 @@ public class Symtab {
     public final Type suppressWarningsType;
     public final Type inheritedType;
     public final Type proprietaryType;
+    public final Type mapType;
 
     /** The symbol representing the length field of an array.
      */
@@ -383,6 +384,7 @@ public class Symtab {
         deprecatedType = enterClass("java.lang.Deprecated");
         suppressWarningsType = enterClass("java.lang.SuppressWarnings");
         inheritedType = enterClass("java.lang.annotation.Inherited");
+        mapType = enterClass( "java.util.Map" );
 
         // Enter a synthetic class that is used to mark Sun
         // proprietary classes in ct.sym.  This class does not have a
