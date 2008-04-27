@@ -1737,9 +1737,8 @@ public class Attr extends JCTree.Visitor {
         final Type eMapType = types.asSuper( atype, syms.mapType.tsym );
         final Type eListType = types.asSuper( atype, syms.listType.tsym );
         if (eMapType != null && eListType != null) {
-          // TODO @shams error something which implements both List and Map
-          // maybe more advanced handling
-
+          // atype implements both List and Map interfaces. Ambiguous access.
+          log.error(tree.pos(), "one.of.list.map.req.but.found.both", atype);
         } else if(eMapType != null) {
           // atype is an instance of a java.util.Map
           // This syntax is for accessing a java.util.Map
@@ -1755,8 +1754,8 @@ public class Attr extends JCTree.Visitor {
           owntype = eMapValueType;
 
         } else if(eListType != null) {
-          // atype is an instance of a java.util.Map
-          // This syntax is for accessing a java.util.Map
+          // atype is an instance of a java.util.List
+          // This syntax is for accessing a java.util.List
           final List<Type> eListParams = eListType.allparams();
           final Type eListElementType = eListParams.get( 0 );
 
@@ -1774,8 +1773,8 @@ public class Attr extends JCTree.Visitor {
           owntype = types.elemtype(atype);
 
         } else if (atype.tag != ERROR) {
-          // TODO @shams Redefine error message for Array/Map
-          log.error(tree.pos(), "array.req.but.found", atype);
+          // Not an array, list or map. So report error.
+          log.error(tree.pos(), "array.list.map.req.but.found", atype);
         }
         if ((pkind & VAR) == 0) owntype = capture(owntype);
         result = check(tree, owntype, VAR, pkind, pt);
