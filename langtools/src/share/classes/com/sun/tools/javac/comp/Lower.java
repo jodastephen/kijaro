@@ -2632,8 +2632,10 @@ public class Lower extends TreeTranslator {
     final Type eListType = types.asSuper( tree.indexed.type, syms.listType.tsym );
     if ( eMapType != null ) {
       // a java.util.Map accessor
-      final Type eMapKeyType = eMapType.getTypeArguments().get( 0 );
-      final Type eMapValueType = eMapType.getTypeArguments().get( 1 );
+      final Type eMapKeyType = eMapType.getTypeArguments().isEmpty() ?
+              syms.objectType : eMapType.getTypeArguments().get( 0 );
+      final Type eMapValueType = eMapType.getTypeArguments().isEmpty() ?
+              syms.objectType : eMapType.getTypeArguments().get( 1 );
 
       tree.index = translate( tree.index, eMapKeyType );
       // replace the accessor with a call to <indexed-map>.get(<index>);
@@ -2649,7 +2651,8 @@ public class Lower extends TreeTranslator {
       result = eInvocation;
     } else if ( eListType != null ) {
       // a java.util.List accessor
-      final Type eListElementType = eListType.getTypeArguments().get( 0 );
+      final Type eListElementType = eListType.getTypeArguments().isEmpty() ?
+              syms.objectType : eListType.getTypeArguments().get( 0 );
 
       tree.index = translate( tree.index, syms.intType );
       // replace the accessor with a call to <indexed-list>.get(<index>);
@@ -2703,10 +2706,14 @@ public class Lower extends TreeTranslator {
         // eMapType && eFieldAccess will not be null as they are
         // included in clause for eMapGet to be true
         List<Type> eMethodParams = eMapType.getTypeArguments();
+        if (eMethodParams.isEmpty()) {
+          eMethodParams = eMethodParams.append( syms.objectType );
+          eMethodParams = eMethodParams.append( syms.objectType );
+        }
         Symbol put = lookupMethod( tree.lhs.pos(), names.put, eMapType, eMethodParams );
         List<JCExpression> args = List.<JCExpression> nil().append( app.args.get( 0 ) ).append( tree.rhs );
         JCMethodInvocation eInvocation = make.App( make.Select( eFieldAccess.selected, put ), args );
-        eInvocation.setType( eMapType.getTypeArguments().get( 1 ) );
+        eInvocation.setType( eMethodParams.get( 1 ) );
 
         result = eInvocation;
       } else if ( eListGet ) {
@@ -2714,11 +2721,13 @@ public class Lower extends TreeTranslator {
         make_at( tree.lhs.pos() );
         // eListType && eFieldAccess will not be null as they are
         // included in clause for eListGet to be true
-        List<Type> eMethodParams = List.<Type>nil().append( syms.intType ).append( eListType.getTypeArguments().get( 0 ) );
+        final Type eListElementType = eListType.getTypeArguments().isEmpty() ?
+                syms.objectType : eListType.getTypeArguments().get( 0 );
+        List<Type> eMethodParams = List.<Type>nil().append( syms.intType ).append( eListElementType );
         Symbol set = lookupMethod( tree.lhs.pos(), names.set, eListType, eMethodParams);
         List<JCExpression> args = List.<JCExpression> nil().append( app.args.get( 0 ) ).append( tree.rhs );
         JCMethodInvocation eInvocation = make.App( make.Select( eFieldAccess.selected, set ), args );
-        eInvocation.setType( eListType.getTypeArguments().get( 0 ) );
+        eInvocation.setType( eListElementType );
 
         result = eInvocation;
       } else {

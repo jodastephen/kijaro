@@ -662,17 +662,20 @@ public class TransTypes extends TreeTranslator {
     if ( eMapType != null ) {
       // This is a java.util.Map accessor
       // Do not erase types if a java.util.Map
-      // java.util.Map index must be the Key type
-      tree.index = translate( tree.index, eMapType.getTypeArguments().get( 0 ) );
-      // Element type is the type of V for the java.util.Map
-      eElementType = eMapType.getTypeArguments().get( 1 );
+      // java.util.Map index must be the Key type / java.lang.Object
+      tree.index = translate( tree.index, eMapType.getTypeArguments().isEmpty() ?
+              syms.objectType : eMapType.getTypeArguments().get( 0 ) );
+      // Element type is the type of V / java.lang.Object for the java.util.Map
+      eElementType = eMapType.getTypeArguments().isEmpty() ?
+              syms.objectType : eMapType.getTypeArguments().get( 1 );
     } else if ( eListType != null ) {
       // This is a java.util.List accessor
       // Do not erase types if a java.util.List
       // java.util.List index must be the int type
       tree.index = translate( tree.index, syms.intType );
-      // Element type is the type of E for the java.util.List
-      eElementType = eListType.getTypeArguments().get( 0 );
+      // Element type is the type of E / java.lang.Object for the java.util.List
+      eElementType = eListType.getTypeArguments().isEmpty() ?
+              syms.objectType : eListType.getTypeArguments().get( 0 );
     } else {
       // This is an array accessor
       tree.indexed = translate( tree.indexed, erasure( tree.indexed.type ) );
