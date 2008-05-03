@@ -1742,7 +1742,12 @@ public class Attr extends JCTree.Visitor {
         } else if(eMapType != null) {
           // atype is an instance of a java.util.Map
           // This syntax is for accessing a java.util.Map
-          final List<Type> eMapParams = eMapType.allparams();
+          List<Type> eMapParams = eMapType.allparams();
+          if (eMapParams.isEmpty()) {
+            // Generics have not been used, so set to Object Type
+            eMapParams = eMapParams.append( syms.objectType );
+            eMapParams = eMapParams.append( syms.objectType );
+          }
           final Type eMapKeyType = eMapParams.get( 0 );
           final Type eMapValueType = eMapParams.get( 1 );
 
@@ -1756,7 +1761,11 @@ public class Attr extends JCTree.Visitor {
         } else if(eListType != null) {
           // atype is an instance of a java.util.List
           // This syntax is for accessing a java.util.List
-          final List<Type> eListParams = eListType.allparams();
+          List<Type> eListParams = eListType.allparams();
+          if (eListParams.isEmpty()) {
+            // Generics have not been used, so set to Object Type
+            eListParams = eListParams.append( syms.objectType );
+          }
           final Type eListElementType = eListParams.get( 0 );
 
           // Validate the index expression to the int Type
