@@ -345,6 +345,29 @@ public class TreeMaker implements JCTree.Factory {
         return tree;
     }
 
+    public JCCollectionInitializer CollectionInitializer( JCExpression classtype,
+                                                          Type elemtype, List<JCExpression> elems ) {
+      JCCollectionInitializer tree = new JCCollectionInitializer( classtype, elemtype, elems );
+      tree.pos = pos;
+      return tree;
+    }
+
+    public JCMapInitializer MapInitializer( JCExpression classtype,
+                                            Type keytype, List<JCExpression> keys ,
+                                            Type valtype, List<JCExpression> vals ) {
+      JCMapInitializer tree = new JCMapInitializer( classtype, keytype, keys , valtype , vals );
+      tree.pos = pos;
+      return tree;
+    }
+
+    public JCNewCollectionsClass NewCollectionsClass( JCExpression encl, List<JCExpression> typeargs, JCExpression clazz,
+                                                      List<JCExpression> args, JCClassDecl def,
+                                                      JCCollectionsInitializer initializer ) {
+      JCNewCollectionsClass tree = new JCNewCollectionsClass( encl, typeargs, clazz, args, def, initializer );
+      tree.pos = pos;
+      return tree;
+    }
+
     public JCParens Parens(JCExpression expr) {
         JCParens tree = new JCParens(expr);
         tree.pos = pos;

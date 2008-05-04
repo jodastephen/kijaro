@@ -28,6 +28,8 @@ package com.sun.tools.javac.tree;
 import java.io.*;
 import java.util.*;
 
+import com.sun.source.tree.CollectionsInitializerTree;
+import com.sun.source.tree.Tree.Kind;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
@@ -872,6 +874,58 @@ public class Pretty extends JCTree.Visitor {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+    }
+
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+      try {
+        print( "[" );
+        if ( tree.elements != null ) {
+          printExprs( tree.elements );
+        }
+        print( "]" );
+
+      } catch ( IOException e ) {
+        throw new UncheckedIOException( e );
+      }
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+      try {
+        int size = 0;
+        if (tree.keys != null) {
+          size = Math.max( size, tree.keys.size() );
+        }
+        if (tree.values != null) {
+          size = Math.max( size, tree.values.size() );
+        }
+        print( "[" );
+        for ( int i = 0; i < size; i++ ) {
+          if (tree.keys != null && i < tree.keys.size()) {
+            printExpr( tree.keys.get( i ) );
+          }
+          print( ":" );
+          if (tree.values != null && i < tree.values.size()) {
+            printExpr( tree.values.get( i ) );
+          }
+          print( "," );
+        }
+        print( "]" );
+
+      } catch ( IOException e ) {
+        throw new UncheckedIOException( e );
+      }
+    }
+
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+      visitNewClass( tree );
+      final CollectionsInitializerTree eCollectionsInitializer = tree.getCollectionsInitializer();
+      if ( eCollectionsInitializer != null ) {
+        if ( eCollectionsInitializer.getKind() == Kind.COLLECTION_INITIALIZER ) {
+          visitCollectionInitializer( (JCCollectionInitializer) eCollectionsInitializer );
+        } else if ( eCollectionsInitializer.getKind() == Kind.MAP_INITIALIZER ) {
+          visitMapInitializer( (JCMapInitializer) eCollectionsInitializer );
+        }
+      }
     }
 
     public void visitParens(JCParens tree) {

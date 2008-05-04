@@ -517,6 +517,10 @@ public class Name implements javax.lang.model.element.Name {
             put = fromString("put");
             // Name used to determine set method for java.util.List
             set = fromString("set");
+            // Name used to determine fillCollection method to fill java.util.Collection instances
+            fillCollection = fromString( "fillCollection" );
+            // Name used to determine fillMap method to fill java.util.Map instances
+            fillMap = fromString( "fillMap" );
         }
 
         public Table() {
@@ -655,6 +659,9 @@ public class Name implements javax.lang.model.element.Name {
         public final Name get;
         public final Name put;
         public final Name set;
+        // Names used to determine 'fill' methods for Collection and Map instances
+        public final Name fillCollection;
+        public final Name fillMap;
     }
 
     public boolean isEmpty() {

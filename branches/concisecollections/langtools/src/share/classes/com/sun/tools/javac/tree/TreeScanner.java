@@ -208,6 +208,22 @@ public class TreeScanner extends Visitor {
         scan(tree.elems);
     }
 
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+      scan( tree.classtype );
+      scan( tree.elements );
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+      scan( tree.classtype );
+      scan( tree.keys );
+      scan( tree.values );
+    }
+
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+      visitNewClass( tree );
+      scan( tree.initializer );
+    }
+
     public void visitParens(JCParens tree) {
         scan(tree.expr);
     }

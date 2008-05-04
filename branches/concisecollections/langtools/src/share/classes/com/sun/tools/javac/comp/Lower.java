@@ -3151,6 +3151,79 @@ public class Lower extends TreeTranslator {
         result = tree;
     }
 
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+
+      tree.initializer.type = tree.type;
+      // Convert tree to a new class tree and a sequence of add statements
+      make_at( tree.pos() );
+
+      JCNewClass eNewCollectionsClass = make.NewClass( tree.encl, tree.typeargs, tree.clazz, tree.args, tree.def );
+      eNewCollectionsClass.type = tree.type;
+      eNewCollectionsClass.constructor = tree.constructor;
+      eNewCollectionsClass.varargsElement = tree.varargsElement;
+
+      final JCIdent eJavaIdent = make.Ident(  names.fromString( "java" ) );
+      eJavaIdent.sym = rs.resolveIdent( eJavaIdent.pos(), attrEnv, eJavaIdent.name, Kinds.PCK );
+      final JCFieldAccess eJavaUtil = make.Select( eJavaIdent, names.fromString( "util" ) );
+      eJavaUtil.sym = rs.access( rs.findIdentInPackage( attrEnv, eJavaIdent.sym.type.tsym, eJavaUtil.name, Kinds.PCK ), eJavaUtil.pos(), eJavaIdent.sym.type, eJavaUtil.name, true );
+      JCFieldAccess eJavaUtilCollection = make.Select( eJavaUtil, names.fromString( "CollectionUtil" ) );
+      eJavaUtilCollection.sym = rs.access( rs.findIdentInPackage( attrEnv, eJavaUtil.sym.type.tsym, eJavaUtilCollection.name, Kinds.TYP ), eJavaUtilCollection.pos(), eJavaIdent.sym.type, eJavaUtilCollection.name, true );
+      eJavaUtilCollection = translate( eJavaUtilCollection );
+
+      final Name eCollectionUtilName = names.fromString("java.util.CollectionUtil");
+      final ClassSymbol eClassSymbol = reader.enterClass(eCollectionUtilName);
+      final Type eCollectionUtilType = eClassSymbol.type;
+      if (eJavaUtilCollection.type == null) {
+        eJavaUtilCollection.type = eCollectionUtilType;
+      }
+
+      JCMethodInvocation eAddAllInvocation = null;
+      if ( tree.initializer.getTag() == JCTree.COLLECTIONINITIALIZER ) {
+        JCCollectionInitializer eCollectionInitializerTree = (JCCollectionInitializer) tree.initializer;
+        JCNewArray eElementsArray =
+          make.NewArray( make.Type( eCollectionInitializerTree.elemtype ), List.<JCExpression> nil(),
+            eCollectionInitializerTree.elements );
+        eElementsArray.type = new ArrayType( eCollectionInitializerTree.elemtype, syms.arrayClass );
+
+        List<Type> params = List.<Type> nil().append( tree.type ).append( eElementsArray.type );
+        List<JCExpression> args = List.<JCExpression> nil().append( eNewCollectionsClass ).append( eElementsArray );
+
+        Symbol fillCollection =
+          lookupMethod( tree.pos(), names.fillCollection, eCollectionUtilType, params );
+        final JCExpression eSelectExpression = make.Select( eJavaUtilCollection, fillCollection );
+
+        eAddAllInvocation = make.Apply( null, eSelectExpression, args );
+
+      } else if ( tree.initializer.getTag() == JCTree.MAPINITIALIZER ) {
+        JCMapInitializer eMapInitializerTree = (JCMapInitializer) tree.initializer;
+        JCNewArray eKeyArray =
+          make.NewArray( make.Type( eMapInitializerTree.keytype ), List.<JCExpression> nil(),
+            eMapInitializerTree.keys );
+        eKeyArray.type = new ArrayType( eMapInitializerTree.keytype, syms.arrayClass );
+        JCNewArray eValueArray =
+          make.NewArray( make.Type( eMapInitializerTree.valtype ), List.<JCExpression> nil(),
+            eMapInitializerTree.values );
+        eValueArray.type = new ArrayType( eMapInitializerTree.valtype, syms.arrayClass );
+
+        List<Type> params = List.<Type> nil().append( tree.type ).append( eKeyArray.type ).append( eValueArray.type );
+        List<JCExpression> args = List.<JCExpression> nil().append( eNewCollectionsClass ).append( eKeyArray ).append( eValueArray );
+
+        Symbol fillMap =
+          lookupMethod( tree.pos(), names.fillMap, eCollectionUtilType, params );
+        final JCExpression eSelectExpression = make.Select( eJavaUtilCollection, fillMap );
+
+        eAddAllInvocation = make.Apply( null, eSelectExpression, args );
+      }
+
+      if (eAddAllInvocation != null) {
+        eAddAllInvocation.setType( eNewCollectionsClass.type );
+        eAddAllInvocation = translate( eAddAllInvocation );
+      }
+
+      result = eAddAllInvocation;
+
+    }
+
     public void visitSelect(JCFieldAccess tree) {
         // need to special case-access of the form C.super.x
         // these will always need an access method.

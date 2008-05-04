@@ -1447,13 +1447,86 @@ public class Parser {
     {
         List<JCExpression> args = arguments();
         JCClassDecl body = null;
+        JCCollectionsInitializer collsInit = null;
         if (S.token() == LBRACE) {
             int pos = S.pos();
             List<JCTree> defs = classOrInterfaceBody(names.empty, false);
             JCModifiers mods = F.at(Position.NOPOS).Modifiers(0);
             body = toP(F.at(pos).AnonymousClassDef(mods, defs));
         }
-        return toP(F.at(newpos).NewClass(encl, typeArgs, t, args, body));
+        if (S.token() == LBRACKET ) {
+          int pos = S.pos();
+          collsInit = collectionsInitializer( pos, t );
+        }
+        if (collsInit == null) {
+          return toP(F.at(newpos).NewClass(encl, typeArgs, t, args, body));
+        } else {
+          return toP(F.at(newpos).NewCollectionsClass(encl, typeArgs, t, args, body, collsInit));
+        }
+    }
+
+    /**
+     * CollectionsInitializer = "[" [Expression { "," Expression } ] "]"
+     * CollectionsInitializer = "[" [Expression : Expression { "," Expression : Expression } ] "]"
+     */
+    JCCollectionsInitializer collectionsInitializer( int newpos, JCExpression type )
+    {
+      ListBuffer<JCExpression> keyExpressions = new ListBuffer<JCExpression>();
+      ListBuffer<JCExpression> valExpressions = new ListBuffer<JCExpression>();
+      accept( LBRACKET );
+
+      boolean eMapInitializer = false;
+      if ( S.token() == RBRACKET ) {
+        // Empty collections initializer block, parser will skip this initializer
+        accept( RBRACKET );
+        return null;
+      }
+      // Token after LBRACKET was not a RBRACKET, so it must be an expression
+      keyExpressions.append( expression() );
+      if ( S.token() == COLON ) {
+        // this is a Map initializer
+        eMapInitializer = true;
+        S.nextToken();
+        valExpressions.append( expression() );
+        if ( S.token() == COMMA ) {
+          // move ahead from the comma
+          S.nextToken();
+        } else if ( S.token() != RBRACKET ) {
+          // unexpected token which is not a COMMA or RBRACKET
+          syntaxError( "expected.comma.or.rbracket", S.token().name );
+        }
+      } else if ( S.token() == COMMA ) {
+        // advance past the comma
+        S.nextToken();
+      }
+
+      while ( S.token() != RBRACKET ) {
+        // accept the next expression
+        keyExpressions.append( expression() );
+        if ( eMapInitializer ) {
+          if ( S.token() == COLON ) {
+            S.nextToken();
+            valExpressions.append( expression() );
+          } else {
+            // unexpected token, report an error
+            syntaxError( "expected.colon", S.token().name );
+          }
+        }
+        if ( S.token() == COMMA ) {
+          // move ahead from the comma
+          S.nextToken();
+        } else if ( S.token() != RBRACKET ) {
+          // report an error, we expected COMMA/RBRACKET found something else
+          syntaxError( "expected.comma.or.rbracket", S.token().name );
+        }
+      }
+      accept( RBRACKET );
+
+      if ( eMapInitializer ) {
+        return toP( F.at( newpos ).MapInitializer( type, null, keyExpressions.toList(), null, valExpressions.toList() ) );
+      } else {
+        return toP( F.at( newpos ).CollectionInitializer( type, null, keyExpressions.toList() ) );
+      }
     }
 
     /** ArrayInitializer = "{" [VariableInitializer {"," VariableInitializer}] [","] "}"
