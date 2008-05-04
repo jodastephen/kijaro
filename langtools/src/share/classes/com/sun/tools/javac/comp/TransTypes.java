@@ -609,6 +609,31 @@ public class TransTypes extends TreeTranslator {
         result = tree;
     }
 
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+      tree.classtype = translate( tree.classtype, null );
+      tree.elements = translate(tree.elements, (tree.type == null) ?
+              null : erasure(tree.elemtype));
+
+      result = tree;
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+      tree.classtype = translate( tree.classtype, null );
+      tree.keys = translate(tree.keys, (tree.type == null) ?
+              null : erasure(tree.keytype));
+      tree.values = translate(tree.values, (tree.type == null) ?
+              null : erasure(tree.valtype));
+
+      result = tree;
+    }
+
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+      visitNewClass(tree);
+      translate( tree.initializer );
+
+      result = tree;
+    }
+
     public void visitParens(JCParens tree) {
         tree.expr = translate(tree.expr, pt);
         tree.type = erasure(tree.type);

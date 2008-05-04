@@ -288,6 +288,28 @@ public class TreeTranslator extends JCTree.Visitor {
         result = tree;
     }
 
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+      tree.classtype = translate(tree.classtype);
+      tree.elements = translate(tree.elements);
+      result = tree;
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+      tree.classtype = translate(tree.classtype);
+      tree.keys = translate(tree.keys);
+      tree.values = translate(tree.values);
+      result = tree;
+    }
+
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+      tree.encl = translate(tree.encl);
+      tree.clazz = translate(tree.clazz);
+      tree.args = translate(tree.args);
+      tree.def = translate(tree.def);
+      tree.initializer = translate( tree.initializer );
+      result = tree;
+    }
+
     public void visitParens(JCParens tree) {
         tree.expr = translate(tree.expr);
         result = tree;

@@ -42,6 +42,7 @@ import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.source.tree.Tree;
+import com.sun.source.tree.Tree.Kind;
 import com.sun.source.tree.*;
 
 import static com.sun.tools.javac.code.BoundKind.*;
@@ -191,9 +192,21 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static final int NEWCLASS = APPLY + 1;
 
+    /** Class instance creation expressions, of type NewCollectionsClass.
+     */
+    public static final int NEWCOLLECTIONSCLASS = NEWCLASS + 1;
+
+    /** Class instance creation expressions, of type CollectionInitializer.
+     */
+    public static final int COLLECTIONINITIALIZER = NEWCOLLECTIONSCLASS + 1;
+
+    /** Class instance creation expressions, of type MapInitializer.
+     */
+    public static final int MAPINITIALIZER = COLLECTIONINITIALIZER + 1;
+
     /** Array creation expressions, of type NewArray.
      */
-    public static final int NEWARRAY = NEWCLASS + 1;
+    public static final int NEWARRAY = MAPINITIALIZER + 1;
 
     /** Parenthesized subexpressions, of type Parens.
      */
@@ -1367,6 +1380,175 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         }
     }
 
+
+    /**
+     * An abstract class to act as a parent for Collections initializers
+     */
+    public static abstract class JCCollectionsInitializer
+      extends JCExpression
+      implements CollectionsInitializerTree
+    {
+    }
+
+    /**
+     * A collection initializer [ "a", "b", "c" ] following a class instance creation.
+     */
+    public static class JCCollectionInitializer
+      extends JCCollectionsInitializer
+      implements CollectionInitializerTree
+    {
+      public JCExpression classtype;
+
+      public Type elemtype;
+
+      public List<JCExpression> elements;
+
+      protected JCCollectionInitializer( JCExpression classtype,
+                                         Type elemtype, List<JCExpression> elems ) {
+        this.classtype = classtype;
+        this.elemtype = elemtype;
+        this.elements = elems;
+      }
+
+      public JCExpression getType() {
+        return classtype;
+      }
+
+      @Override
+      public void accept( Visitor v ) {
+        v.visitCollectionInitializer( this );
+      }
+
+      @Override
+      public <R, D> R accept( TreeVisitor<R, D> v, D d ) {
+        return v.visitCollectionInitializer( this, d );
+      }
+
+      @Override
+      public Kind getKind() {
+        return Kind.COLLECTION_INITIALIZER;
+      }
+
+      @Override
+      public int getTag() {
+        return COLLECTIONINITIALIZER;
+      }
+
+      @Override
+      public java.util.List<? extends ExpressionTree> getElements() {
+        return elements;
+      }
+    }
+
+    /**
+     * A collection initializer [ "a", "b", "c" ] following a class instance creation.
+     */
+    public static class JCMapInitializer
+      extends JCCollectionsInitializer
+      implements MapInitializerTree
+    {
+      public JCExpression classtype;
+
+      public Type keytype;
+
+      public List<JCExpression> keys;
+
+      public Type valtype;
+
+      public List<JCExpression> values;
+
+      protected JCMapInitializer( JCExpression classtype,
+                                  Type keytype, List<JCExpression> keys ,
+                                  Type valtype, List<JCExpression> values ) {
+        this.classtype = classtype;
+        this.keytype = keytype;
+        this.keys = keys;
+        this.valtype = valtype;
+        this.values = values;
+
+      }
+
+      public JCExpression getType() {
+        return classtype;
+      }
+
+      @Override
+      public void accept( Visitor v ) {
+        v.visitMapInitializer( this );
+      }
+
+      @Override
+      public <R, D> R accept( TreeVisitor<R, D> v, D d ) {
+        return v.visitMapInitializer( this, d );
+      }
+
+      @Override
+      public Kind getKind() {
+        return Kind.MAP_INITIALIZER;
+      }
+
+      @Override
+      public int getTag() {
+        return MAPINITIALIZER;
+      }
+
+      @Override
+      public java.util.List<? extends ExpressionTree> getKeys() {
+        return keys;
+      }
+
+      @Override
+      public java.util.List<? extends ExpressionTree> getValues() {
+        return values;
+      }
+    }
+
+    /**
+    * A new(...) operation including a Collection Initializer.
+    */
+    public static class JCNewCollectionsClass
+      extends JCNewClass
+      implements NewCollectionsClassTree
+    {
+
+      public JCCollectionsInitializer initializer;
+
+      protected JCNewCollectionsClass( JCExpression encl, List<JCExpression> typeargs, JCExpression clazz,
+                                      List<JCExpression> args, JCClassDecl def,
+                                      JCCollectionsInitializer initializer ) {
+        super( encl, typeargs, clazz, args, def );
+        this.initializer = initializer;
+
+      }
+
+      @Override
+      public void accept( Visitor v ) {
+        v.visitNewCollectionsClass( this );
+      }
+
+      public Kind getKind() {
+        return Kind.NEW_COLLECTION_CLASS;
+      }
+
+      @Override
+      public <R, D> R accept( TreeVisitor<R, D> v, D d ) {
+        return v.visitNewCollectionsClass( this, d );
+      }
+
+      @Override
+      public int getTag() {
+        return NEWCOLLECTIONSCLASS;
+      }
+
+      /**
+       * @see com.sun.source.tree.NewCollectionsClassTree#getCollectionsInitializer()
+       */
+      @Override
+      public CollectionsInitializerTree getCollectionsInitializer() {
+        return initializer;
+      }
+    }
+
     /**
      * A new[...] operation.
      */
@@ -2176,6 +2358,13 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
         public void visitModifiers(JCModifiers that)         { visitTree(that); }
         public void visitErroneous(JCErroneous that)         { visitTree(that); }
         public void visitLetExpr(LetExpr that)               { visitTree(that); }
+
+        public void visitCollectionInitializer(
+              JCCollectionInitializer that)                  { visitTree(that); }
+        public void visitMapInitializer(
+              JCMapInitializer that)                         { visitTree(that); }
+        public void visitNewCollectionsClass(
+              JCNewCollectionsClass that)                     { visitTree(that); }
 
         public void visitTree(JCTree that)                   { assert false; }
     }

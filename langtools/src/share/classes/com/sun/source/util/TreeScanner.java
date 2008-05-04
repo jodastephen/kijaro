@@ -283,6 +283,23 @@ public class TreeScanner<R,P> implements TreeVisitor<R,P> {
         return r;
     }
 
+    public R visitCollectionInitializer( CollectionInitializerTree node, P p ) {
+      R r = scan(node.getElements(), p);
+      return r;
+    }
+
+    public R visitMapInitializer( MapInitializerTree node, P p ) {
+      R r = scan(node.getKeys(), p);
+      r = scanAndReduce(node.getValues(), p, r);
+      return r;
+    }
+
+    public R visitNewCollectionsClass( NewCollectionsClassTree node, P p ) {
+      R r = visitNewClass( node, p );
+      r = scanAndReduce( node.getCollectionsInitializer(), p, r );
+      return r;
+    }
+
     public R visitParenthesized(ParenthesizedTree node, P p) {
         return scan(node.getExpression(), p);
     }

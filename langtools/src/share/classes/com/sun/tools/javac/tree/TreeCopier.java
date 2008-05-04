@@ -273,6 +273,32 @@ public class TreeCopier<P> implements TreeVisitor<JCTree,P> {
         return M.at(t.pos).NewClass(encl, typeargs, clazz, args, def);
     }
 
+    public JCTree visitCollectionInitializer( CollectionInitializerTree node, P p ) {
+      JCCollectionInitializer t = (JCCollectionInitializer) node;
+      JCExpression classtype = copy( t.classtype, p );
+      List<JCExpression> elems = copy( t.elements, p );
+      return M.at( t.pos ).CollectionInitializer( classtype, t.elemtype, elems );
+    }
+
+    public JCTree visitMapInitializer( MapInitializerTree node, P p ) {
+      JCMapInitializer t = (JCMapInitializer) node;
+      JCExpression classtype = copy( t.classtype, p );
+      List<JCExpression> keys = copy( t.keys, p );
+      List<JCExpression> vals = copy( t.values, p );
+      return M.at( t.pos ).MapInitializer( classtype, t.keytype, keys, t.valtype, vals );
+    }
+
+    public JCTree visitNewCollectionsClass( NewCollectionsClassTree node, P p ) {
+      JCNewCollectionsClass t = (JCNewCollectionsClass) node;
+      JCExpression encl = copy( t.encl, p );
+      List<JCExpression> typeargs = copy( t.typeargs, p );
+      JCExpression clazz = copy( t.clazz, p );
+      List<JCExpression> args = copy( t.args, p );
+      JCClassDecl def = copy( t.def, p );
+      JCCollectionsInitializer initializer = copy( t.initializer, p );
+      return M.at( t.pos ).NewCollectionsClass( encl, typeargs, clazz, args, def, initializer );
+    }
+
     public JCTree visitParenthesized(ParenthesizedTree node, P p) {
         JCParens t = (JCParens) node;
         JCExpression expr = copy(t.expr, p);

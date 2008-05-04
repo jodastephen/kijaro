@@ -251,4 +251,16 @@ public class SimpleTreeVisitor <R,P> implements TreeVisitor<R,P> {
     public R visitOther(Tree node, P p) {
         return defaultAction(node, p);
     }
+
+    public R visitCollectionInitializer( CollectionInitializerTree pNode, P pP ) {
+      return defaultAction(pNode, pP);
+    }
+
+    public R visitMapInitializer( MapInitializerTree pNode, P pP ) {
+      return defaultAction(pNode, pP);
+    }
+
+    public R visitNewCollectionsClass( NewCollectionsClassTree pNode, P pP ) {
+      return defaultAction(pNode, pP);
+    }
 }

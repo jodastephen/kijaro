@@ -1148,6 +1148,20 @@ public class Flow extends TreeScanner {
         scanExprs(tree.elems);
     }
 
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+      scanExprs( tree.elements );
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+      scanExprs( tree.keys );
+      scanExprs( tree.values );
+    }
+
+    public void visitNewCollectionsClass(JCNewCollectionsClass tree) {
+      visitNewClass( tree );
+      scanExpr(tree.initializer);
+    }
+
     public void visitAssert(JCAssert tree) {
         Bits initsExit = inits.dup();
         Bits uninitsExit = uninits.dup();

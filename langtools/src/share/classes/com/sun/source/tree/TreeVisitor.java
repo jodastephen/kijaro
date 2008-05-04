@@ -105,4 +105,8 @@ public interface TreeVisitor<R,P> {
     R visitWhileLoop(WhileLoopTree node, P p);
     R visitWildcard(WildcardTree node, P p);
     R visitOther(Tree node, P p);
+
+    R visitCollectionInitializer(CollectionInitializerTree node, P p);
+    R visitMapInitializer(MapInitializerTree node, P p);
+    R visitNewCollectionsClass(NewCollectionsClassTree node, P p);
 }

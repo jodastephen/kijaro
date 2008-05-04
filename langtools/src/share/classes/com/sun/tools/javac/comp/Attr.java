@@ -26,7 +26,6 @@
 package com.sun.tools.javac.comp;
 
 import java.util.*;
-import java.util.Set;
 import javax.lang.model.element.ElementKind;
 import javax.tools.JavaFileObject;
 
@@ -1530,6 +1529,88 @@ public class Attr extends JCTree.Visitor {
         }
         result = check(tree, owntype, VAL, pkind, pt);
         chk.validate(tree.typeargs);
+    }
+
+    public void visitCollectionInitializer( JCCollectionInitializer tree ) {
+
+      Type owntype = syms.errType;
+      // Find the type of the class to which the initializer belongs
+      Type atype = attribTree( tree.getType(), env, TYP, Type.noType );
+
+      // Match it with a collection type
+      final Type eCollectionSuperType = types.asSuper( atype, syms.collectionType.tsym );
+
+      if ( eCollectionSuperType == null ) {
+        log.error( tree.pos(), "illegal.initializer.for.type", pt );
+      } else {
+        List<Type> eCollectionParams = eCollectionSuperType.allparams();
+        if ( eCollectionParams == null || eCollectionParams.isEmpty() ) {
+          // Try loading the generic type from the prototype definition
+          final Type ePrototytpeCollectionType = types.asSuper( pt, syms.collectionType.tsym );
+          eCollectionParams = ePrototytpeCollectionType.allparams();
+        }
+        final Type eElementType;
+        if ( eCollectionParams == null || eCollectionParams.isEmpty() ) {
+          eElementType = syms.objectType;
+        } else {
+          eElementType = eCollectionParams.get( 0 );
+        }
+
+        attribExprs( tree.elements, env, eElementType );
+
+        // Set the type for use later during compilation
+        tree.elemtype = eElementType;
+
+        owntype = pt;
+      }
+      result = check( tree, owntype, VAR, pkind, pt );
+    }
+
+    public void visitMapInitializer( JCMapInitializer tree ) {
+
+      Type owntype = syms.errType;
+      // Find the type of the class to which the initializer belongs
+      Type atype = attribTree( tree.getType(), env, TYP, Type.noType );
+
+      // Match it with a Map type
+      final Type eMapSuperType = types.asSuper( atype, syms.mapType.tsym );
+
+      if ( eMapSuperType == null ) {
+        log.error( tree.pos(), "illegal.initializer.for.type", pt );
+      } else {
+        List<Type> eMapParams = eMapSuperType.allparams();
+        if ( eMapParams == null || eMapParams.isEmpty() ) {
+          // Try loading the generic type from the prototype definition
+          final Type ePrototytpeMapType = types.asSuper( pt, syms.mapType.tsym );
+          eMapParams = ePrototytpeMapType.allparams();
+        }
+        final Type eKeyType, eValueType;
+        if ( eMapParams == null || eMapParams.isEmpty() ) {
+          eKeyType = syms.objectType;
+          eValueType = syms.objectType;
+        } else {
+          eKeyType = eMapParams.get( 0 );
+          eValueType = eMapParams.get( 1 );
+        }
+
+        attribExprs( tree.keys, env, eKeyType );
+        attribExprs( tree.values, env, eValueType );
+
+        // Set the types for use later during compilation
+        tree.keytype = eKeyType;
+        tree.valtype = eValueType;
+
+        owntype = pt;
+      }
+      result = check( tree, owntype, VAR, pkind, pt );
+    }
+
+    public void visitNewCollectionsClass( JCNewCollectionsClass tree ) {
+
+      visitNewClass( tree );
+      final Type eNewClassResult = result;
+      attribExpr( (JCCollectionsInitializer) tree.getCollectionsInitializer(), env, pt );
+      result = eNewClassResult;
     }
 
     /** Make an attributed null check tree.
