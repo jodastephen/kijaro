@@ -497,6 +497,24 @@ public class Parser {
         int pos = S.pos();
         JCExpression t = errorTree;
         switch (S.token()) {
+        case BYTELITERAL:
+            try {
+                t = F.at(pos).Literal(
+                    TypeTags.BYTE,
+                    (byte)Convert.string2int(strval(prefix), S.radix()));
+            } catch (NumberFormatException ex) {
+                log.error(S.pos(), "int.number.too.large", strval(prefix));
+            }
+            break;
+        case SHORTLITERAL:
+            try {
+                t = F.at(pos).Literal(
+                    TypeTags.SHORT,
+                    (short)Convert.string2int(strval(prefix), S.radix()));
+            } catch (NumberFormatException ex) {
+                log.error(S.pos(), "int.number.too.large", strval(prefix));
+            }
+            break;
         case INTLITERAL:
             try {
                 t = F.at(pos).Literal(
@@ -926,6 +944,7 @@ public class Parser {
                     case BANG: case TILDE:
                     case LPAREN: case THIS: case SUPER:
                     case INTLITERAL: case LONGLITERAL: case FLOATLITERAL:
+                    case BYTELITERAL: case SHORTLITERAL:
                     case DOUBLELITERAL: case CHARLITERAL: case STRINGLITERAL:
                     case TRUE: case FALSE: case NULL:
                     case NEW: case IDENTIFIER: case ASSERT: case ENUM:
@@ -958,7 +977,7 @@ public class Parser {
             } else return illegal();
             break;
         case INTLITERAL: case LONGLITERAL: case FLOATLITERAL: case DOUBLELITERAL:
-        case CHARLITERAL: case STRINGLITERAL:
+        case CHARLITERAL: case STRINGLITERAL: case BYTELITERAL: case SHORTLITERAL:
         case TRUE: case FALSE: case NULL:
             if (typeArgs == null && (mode & EXPR) != 0) {
                 mode = EXPR;

@@ -472,6 +472,28 @@ public class Scanner implements Lexer {
             scanHexExponentAndSuffix();
     }
 
+    /** Read an integral number. token type depends on number of represented.
+     *  @param radix  The radix of the number; one of 2,16.
+     */
+    private void scanAutosizeNumber(int radix) {
+        this.radix = radix;
+        while (digit(radix) >= 0) {
+            putChar(ch);
+            scanChar();
+        }
+        // work out type
+        int bits = (radix == 2 ? 1 : 4) * sp;
+        if( bits <= 8) {
+            token = BYTELITERAL;
+        } else if( bits <= 16) {
+            token = SHORTLITERAL;
+        } else if( bits <= 32) {
+            token = INTLITERAL;
+        } else {
+            token = LONGLITERAL;
+        }
+    }
+
     /** Read a number.
      *  @param radix  The radix of the number; one of 8, 10, 16.
      */
@@ -802,6 +824,13 @@ public class Scanner implements Lexer {
                         } else {
                             scanNumber(16);
                         }
+                    } else if (ch == 'b' || ch == 'B') { // BCC
+                        scanChar();
+                        scanAutosizeNumber(2);
+                    } else if (ch == 'h' || ch == 'H') { // BCC
+                        scanChar();
+                        scanAutosizeNumber(16);
+
                     } else {
                         putChar('0');
                         scanNumber(8);

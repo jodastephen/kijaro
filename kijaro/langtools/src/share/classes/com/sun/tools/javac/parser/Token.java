@@ -88,6 +88,8 @@ public enum Token {
     VOID("void"),
     VOLATILE("volatile"),
     WHILE("while"),
+    BYTELITERAL,
+    SHORTLITERAL,
     INTLITERAL,
     LONGLITERAL,
     FLOATLITERAL,
