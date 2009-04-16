@@ -10,10 +10,13 @@
 
 public class IntLiterals {
     public static void main(String[] args) throws Exception {
+        
+        // sanity check JLS3 
         assertKind(Type.INT,1);
         assertKind(Type.LONG,1L);
         assertKind(Type.BYTE,(byte)0xff);
         
+        // narrow integer literals smallest type which fits it
         assertKind(Type.BYTE, 0h1);
         assertKind(Type.BYTE, 0h01);
         assertKind(Type.BYTE, 0hff);
@@ -29,8 +32,18 @@ public class IntLiterals {
         assertKind(Type.BYTE, 0b1);
         assertKind(Type.BYTE, 0b00000001);
         assertKind(Type.SHORT,0b000000001);
-        
+
         if(0hff != -1) throw new Exception(0hff + "!=-1");
+        
+        // byte and short suffixes
+        assertKind(Type.BYTE, 1y);
+        assertKind(Type.BYTE, 0x1Y);
+        assertKind(Type.BYTE, 01y);
+        
+        assertKind(Type.SHORT, 1s);
+        assertKind(Type.INT, -1s);  // 1S is unary numeric promoted to an int before unary - operator
+        assertKind(Type.SHORT, 01S);
+        
     }
 
     enum Type { BYTE,SHORT,INT,LONG }

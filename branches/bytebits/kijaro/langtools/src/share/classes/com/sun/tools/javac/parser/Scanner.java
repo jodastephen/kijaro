@@ -524,6 +524,12 @@ public class Scanner implements Lexer {
             if (ch == 'l' || ch == 'L') {
                 scanChar();
                 token = LONGLITERAL;
+            } else if (ch == 'y' || ch == 'Y') {
+                scanChar();
+                token = BYTELITERAL;
+            } else if (ch == 's' || ch == 'S') {
+                scanChar();
+                token = SHORTLITERAL;
             } else {
                 token = INTLITERAL;
             }
@@ -824,10 +830,10 @@ public class Scanner implements Lexer {
                         } else {
                             scanNumber(16);
                         }
-                    } else if (ch == 'b' || ch == 'B') { // BCC
+                    } else if (ch == 'b' || ch == 'B') {
                         scanChar();
                         scanAutosizeNumber(2);
-                    } else if (ch == 'h' || ch == 'H') { // BCC
+                    } else if (ch == 'h' || ch == 'H') {
                         scanChar();
                         scanAutosizeNumber(16);
 
