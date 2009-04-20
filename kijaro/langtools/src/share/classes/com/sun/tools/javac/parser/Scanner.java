@@ -380,11 +380,11 @@ public class Scanner implements Lexer {
                 putChar(ch);
                 scanChar();
             }
-            if ('0' <= ch && ch <= '9') {
+            if (ch == '_' || ('0' <= ch && ch <= '9')) {
                 do {
-                    putChar(ch);
+                    if(ch != '_') putChar(ch);
                     scanChar();
-                } while ('0' <= ch && ch <= '9');
+                } while (ch == '_' || ('0' <= ch && ch <= '9'));
                 if (!allowHexFloats) {
                     lexError("unsupported.fp.lit");
                     allowHexFloats = true;
@@ -412,7 +412,11 @@ public class Scanner implements Lexer {
     /** Read fractional part of floating point number.
      */
     private void scanFraction() {
-        while (digit(10) >= 0) {
+        while (digit(10) >= 0 || ch == '_') {
+            if(ch == '_') {
+                scanChar();
+                continue;
+            }
             putChar(ch);
             scanChar();
         }
@@ -461,7 +465,11 @@ public class Scanner implements Lexer {
         assert ch == '.';
         putChar(ch);
         scanChar();
-        while (digit(16) >= 0) {
+        while (digit(16) >= 0 || ch == '_') {
+            if(ch == '_') {
+                scanChar();
+                continue;
+            }
             seendigit = true;
             putChar(ch);
             scanChar();
@@ -477,7 +485,11 @@ public class Scanner implements Lexer {
      */
     private void scanAutosizeNumber(int radix) {
         this.radix = radix;
-        while (digit(radix) >= 0) {
+        while (digit(radix) >= 0 || ch == '_') {
+            if(ch == '_') {
+                scanChar();
+                continue;
+            }
             putChar(ch);
             scanChar();
         }
@@ -502,7 +514,11 @@ public class Scanner implements Lexer {
         // for octal, allow base-10 digit in case it's a float literal
         int digitRadix = (radix <= 10) ? 10 : 16;
         boolean seendigit = false;
-        while (digit(digitRadix) >= 0) {
+        while (digit(digitRadix) >= 0 || ch == '_') {
+            if(ch == '_') {
+                scanChar();
+                continue;
+            }
             seendigit = true;
             putChar(ch);
             scanChar();
@@ -823,6 +839,7 @@ public class Scanner implements Lexer {
                     scanChar();
                     if (ch == 'x' || ch == 'X') {
                         scanChar();
+                        while(ch == '_') scanChar();
                         if (ch == '.') {
                             scanHexFractionAndSuffix(false);
                         } else if (digit(16) < 0) {
