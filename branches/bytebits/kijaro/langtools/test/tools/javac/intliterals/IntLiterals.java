@@ -1,8 +1,11 @@
+
+import java.util.Arrays;
+
 /*
  * @test
  * 
  * @summary Verify types and values of integer literals
- * @author maddox (adapted from bug report)
+ * @author bruce chapman
  *
  * @run compile IntLiterals.java
  * @run main IntLiterals.java
@@ -43,6 +46,26 @@ public class IntLiterals {
         assertKind(Type.SHORT, 1s);
         assertKind(Type.INT, -1s);  // 1S is unary numeric promoted to an int before unary - operator
         assertKind(Type.SHORT, 01S);
+        
+        // underscores in numbers
+        int[] examples = {52, 5_2, 52_, 0x_52, 0x5_2, 0x52_, 0_52, 05_2, 052_,  0h_5_2_};
+        int[] values = { 52,  52,   52, 0x52,  0x52,  0x52,  052,  052,  052,  0x52};
+        if(! Arrays.equals(examples, values)) {
+            throw new Exception("underscored values are different");
+        }
+        
+        long creditCardNumber = 1234_5678_9012_3456L;
+        long socialSecurityNumbers = 999_99_9999L;
+        float monetaryAmount = 12_345_132.12;
+        long hexBytes = 0xFF_EC_DE_5E;
+        long hexWords = 0xFFEC_DE5E;
+        long maxLong = 0x7fff_ffff_ffff_ffffL;
+        long maxLongDecimal = 9223372036854775807L;
+        long alsoMaxLong = 9_223_372_036_854_775_807L;
+        double whyWouldYouEverDoThis = 0x1_.ffff_ffff_ffff_fp10_23;
+        double whyWouldYouEverDoEvenThis = 0x1.fffffffffffffp1023;
+
+
         
     }
 
