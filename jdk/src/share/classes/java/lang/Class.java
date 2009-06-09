@@ -813,19 +813,6 @@ public final class Class<T> implements java.io.Serializable,
             return getInterfaces();
     }
 
-    /**
-     * Determines the interfaces <em>statically</em> implemented by
-     * the class represented by this object.
-     *
-     * <p>If this object represents an interface, an annotation, a
-     * primitive type or void, the method returns an array of length
-     * 0.
-     *
-     * @return an array of interfaces statically implemented by this class.
-     **/
-    public native Class<?>[] getStaticInterfaces(); // CONTRACTS
-
-
 
     /**
      * Returns the {@code Class} representing the component type of an
@@ -3132,80 +3119,135 @@ public final class Class<T> implements java.io.Serializable,
         return annotationType;
     }
 
+
     // CONTRACTS
+
+    /**
+     * Returns the contract class for this class.  It implements all
+     * the interface types listed with the keyword {@code static} in
+     * the {@code implements} clause of the represented class's
+     * declaration.  An instance of the contract class can be used to
+     * invoke static methods on this class.  The name of the contract
+     * class is the represented class's name plus the string {@code
+     * "$static"}.
+     *
+     * @return the contract class, or {@link java.lang.Object} if there
+     * is none
+     **/
+    public Class<?> getContractorClass() {
+	try {
+	    return forName(getName() + "$static", false, getClassLoader());
+	} catch (ClassNotFoundException ex) {
+	    return java.lang.Object.class;
+	}
+    }
+
+    /**
+     * Determines the interfaces types <em>statically</em> implemented
+     * by the class represented by this object.  This is equivalent to
+     * the result of applying {@code this.{@linkplain
+     * #getContractorClass()}().{@linkplain #getInterfaces()}}.
+     *
+     * <p>If this object represents an interface, an annotation, a
+     * primitive type or void, the method returns an array of length
+     * 0.
+     *
+     * @return an array of interfaces statically implemented by this
+     * class
+     *
+     * @see #getContractorClass()
+     *
+     * @see #getInterfaces()
+     **/
+    public Class<?>[] getContracts() {
+	// Just use the Class API for the contract type.
+	return getContractorClass().getInterfaces();
+    }
+
+    /**
+     * Determines the generic interface types <em>statically</em>
+     * implemented by the class represented by this object.  This is
+     * equivalent to the result of applying {@code this.{@linkplain
+     * #getContractorClass()}().{@linkplain #getGenericInterfaces()}}.
+     *
+     * <p>If this object represents an interface, an annotation, a
+     * primitive type or void, the method returns an array of length
+     * 0.
+     *
+     * @return an array of interfaces statically implemented by this
+     * class
+     *
+     * @see #getContractorClass()
+     *
+     * @see #getGenericInterfaces()
+     **/
+    public Type[] getGenericContracts() {
+	// Just use the Class API for the contract type.
+	return getContractorClass().getGenericInterfaces();
+    }
 
     // This is the object that implements all interfaces which the
     // class is supposed to implement statically.  Calls on this proxy
     // will invoke static methods with the same signature on the
     // actual class.
-    private volatile Object contractProxy = null;
+    private volatile Object contractor = null;
 
     /**
-     * Gets the contract object for this class.  It will be created
-     * once on first demand, and cached thereafter.
+     * Gets the contractor for this class.  It will be created once on
+     * first demand, and cached thereafter.
+     *
+     * <p>The contractor of a class implements non-statically all
+     * those interface types that the class implements statically; its
+     * type is that returned by {@link #getContractorClass()}, so it
+     * can be cast to any of those interface types.  Each method on
+     * the contractor calls a static method on the class with the same
+     * signature.
+     *
+     * <p>The contractor of a class {@code SomeClass} can be obtained
+     * at compile time with {@code SomeClass.static}.
+     *
+     * @return the contractor for the represented class
+     *
+     * @see #getContractorClass() the class of the object returned
      */
-    private Object getContractProxy() {
-	if (contractProxy != null)
-	    return contractProxy;
+    public Object getContractor() {
+	if (contractor != null)
+	    return contractor;
 
 	synchronized (this) {
-	    if (contractProxy != null)
-		return contractProxy;
+	    if (contractor != null)
+		return contractor;
 
-	    return createContractProxy();
-	}
-    }
+	    Class<?> type = getContractorClass();
+	    try {
+		contractor = type.newInstance();
 
-    private Object createContractProxy() {
-	final Map<Method, Method> translation = new HashMap<Method, Method>();
-	InvocationHandler handler = new InvocationHandler() {
-		public Object invoke(Object proxy,
-				     Method method,
-				     Object[] args) throws Throwable {
-		    return translation.get(method).invoke(null, args);
-		}
-	    };
-
-	Class<?>[] types = getStaticInterfaces();
-
-	// Define the mapping for each interface type.
-        for (Class<?> type : types) {
-	    // Define the mapping for each method in this interface.
-	    for (Method from : type.getMethods()) {
-		try {
-		    Method to = this.getMethod(from.getName(),
-					       from.getParameterTypes());
-
-		    // Do we need to check anything else?  The compiler
-		    // will have checked most details already, and if not,
-		    // some error will happen eventually.
-		    translation.put(from, to);
-		} catch (NoSuchMethodException ex) {
-		    // Um, not sure about this.  LinkageError might be
-		    // more appropriate.
-		    throw new NoSuchMethodError(ex.getMessage());
-		}
+		// Is this the right thing to do?  These exceptions
+		// shouldn't really occur anyway.
+	    } catch (InstantiationException ex) {
+		throw new InstantiationError(ex.getMessage());
+	    } catch (IllegalAccessException ex) {
+		throw new IllegalAccessError(ex.getMessage());
 	    }
+	    return contractor;
 	}
-
-	contractProxy = Proxy.newProxyInstance(getClassLoader(),
-					       types, handler);
-
-	return contractProxy;
     }
 
     /**
-     * Gets a contract on the class represented by this object.  A
-     * contract is an interface to a class implemented by static
-     * methods.
+     * Gets a contract implementation on the class represented by this
+     * object.  A contract is an interface to a class implemented by
+     * static methods.
      *
      * @param type the interface type of the contract
      *
      * @return an object of that type whose methods call static
      * methods on this class
+     *
+     * @throws ClassCastException if the interface type is not a
+     * contract of the represented class
      */
-    public <T> T contractOn(Class<T> type) {
-	return type.cast(getContractProxy());
+    public <U> U contractOn(Class<U> type) {
+	return type.cast(getContractor());
     }
 
     /**
@@ -3218,8 +3260,8 @@ public final class Class<T> implements java.io.Serializable,
      * @return true if and only if the class statically implements the
      * interface type or any of its subinterfaces
      */
-    public boolean meetsContract(Class<T> type) {
-	Class<?>[] types = getStaticInterfaces();
+    public boolean meetsContract(Class<?> type) {
+	Class<?>[] types = getContracts();
 	for (Class<?> t : types)
 	    if (type.isAssignableFrom(t))
 		return true;
@@ -3235,11 +3277,12 @@ public final class Class<T> implements java.io.Serializable,
      *
      * @param obj an object to be tested
      *
-     * @return true if the object is an implementation of the static
-     * interfaces of the represented class
+     * @return true if and only if the object is an implementation of
+     * the static interfaces of the represented class
      */
     public boolean contractedBy(Object obj) {
-	return obj == getContractProxy();
+	// Is the object an instance of the contract class?
+	return obj.getClass() == getContractorClass();
     }
 
     // CONTRACTS (end)
