@@ -301,7 +301,7 @@ public class Flow extends TreeScanner {
              exit = pendingExits.next()) {
             boolean synthetic = classDef != null &&
                 classDef.pos == exit.tree.pos;
-            log.error(exit.tree.pos(),
+            log.warning(exit.tree.pos(),
                       synthetic
                       ? "unreported.exception.default.constructor"
                       : "unreported.exception.need.to.catch.or.throw",
@@ -492,7 +492,7 @@ public class Flow extends TreeScanner {
      */
     void scanStat(JCTree tree) {
         if (!alive && tree != null) {
-            log.error(tree.pos(), "unreachable.stmt");
+            log.warning(tree.pos(), "unreachable.stmt");
             if (tree.getTag() != JCTree.SKIP) alive = true;
         }
         scan(tree);
@@ -981,7 +981,7 @@ public class Flow extends TreeScanner {
                        exc.tsym != syms.throwableType.tsym &&
                        exc.tsym != syms.exceptionType.tsym &&
                        !chk.intersects(exc, thrownInTry)) {
-                log.error(l.head.pos(),
+                log.warning(l.head.pos(),
                           "except.never.thrown.in.try", exc);
             }
             caughtInTry = chk.incl(exc, caughtInTry);
