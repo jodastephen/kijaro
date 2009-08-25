@@ -1,0 +1,156 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<h1>Welcome to Kijaro</h1>
+<p>
+Kijaro provides an area for those interested in adding new language features to Java to try out their ideas.
+</p>
+<p>
+The project contains a copy of the Open JDK javac compiler, which has been customised to add additional language features.
+We encourage everyone with a great idea to code it up in java and host it here.
+</p>
+
+<h3>News</h3>
+<p>
+JDK 7 will contain some <a href="http://blogs.sun.com/darcy/entry/small_language_changes_jdk_7">new language features</a>,
+described as <a href="http://blogs.sun.com/darcy/entry/guidance_measure_language_change_size">'small'</a>.
+Kijaro is a useful proving ground and discussion centre for those ideas (with real implementations).
+</p>
+
+<h3>Features</h3>
+<p>
+Each feature is developed in a separate branch. The features currently being worked on are:
+</p>
+<ul>
+<li>
+ <a href="http://docs.google.com/Doc?id=ddhp95vd_0f7mcns">First Class Methods</a>
+ (<a href="http://kijaro.dev.java.net/servlets/ProjectDocumentList?folderID=8804&expandFolder=8804&folderID=0">download</a>)
+ - Method, Field &amp; Constructor literals, Method references, Inner methods
+</li>
+<li>
+ <a href="http://docs.google.com/View?docid=dfhbvdfw_1f7mzf2">Properties</a>
+ - Simple property declarations, literals and usage
+</li>
+<li>
+ <a href="http://freddy33.blogspot.com/search/label/abstract%20enum">Abstract Enums</a>
+ - Abstract superclasses for enums
+</li>
+<li>
+ <a href="http://www.jroller.com/jadda/entry/meta_interfaces_revisited">Static Implements / Contracts</a>
+ - Implementing an interface using static methods
+</li>
+<li>
+ <a href="http://docs.google.com/Doc?id=dfkvb9sc_0pcr8szdd">Anonymous parameters</a>
+ - Not specifying parameter names where they have no meaning
+</li>
+<li>
+ <a href="http://docs.google.com/View?docid=d4tx2hw_46fkz8x6gt">List comprehensions</a>
+ (<a href="http://kijaro.dev.java.net/servlets/ProjectDocumentList?folderID=8837&expandFolder=8837&folderID=8804">download</a>)
+ - Python style list comprehensions
+</li>
+<li>
+ <a href="http://docs.google.com/Doc?id=dfn5297z_14dwzrkpgw">For-each loop for Maps</a>
+ (<a href="http://kijaro.dev.java.net/servlets/ProjectDocumentList?folderID=9074&expandFolder=9074&folderID=8837">download</a>)
+ - Looping around maps
+</li>
+<li>
+ <a href="http://shamsmi.blogspot.com/2008/04/my-java7-wishlist-regarding-collections.html">Array-like access for Lists and Maps</a>
+ - Using the [] operator to access lists and maps
+</li>
+<li>
+ <a href="http://docs.google.com/View?docid=d36kv8n_32g9zj7pdd">Enhanced strings</a>
+ - Multi-line and Raw strings
+</li>
+<li>
+ <a href="http://docs.google.com/View?docid=dcvp3mkv_0fvz5gx7b&pageview=1&hgd=1&hl=en">Byte/Short literal suffixes</a> and
+ <a href="http://docs.google.com/View?docid=dcvp3mkv_125ww5tct&pageview=1&hgd=1&hl=en">Short hex and binary literals</a>
+ (<a href="https://kijaro.dev.java.net/servlets/ProjectDocumentList?folderID=11247&expandFolder=11247&folderID=0">download</a>)
+ - Extended literals
+</li>
+</ul>
+<p>
+This effort is run independently of Sun, and no warranty is given on the quality of the changes made to javac.
+However, we do try and keep the code changes minimal, and as such we hope that all existing Java programs will still compile.
+</p>
+<p>
+This project is similar to the <a href="http://openjdk.java.net/groups/compiler/ksl.html">Kitchen Sink Language</a>
+(<a href="http://ksl.dev.java.net">KSL</a>), however there are a few differences.
+This project will not require code reviews by compiler experts, or the signing of legal documents.
+It is simply a place where those who want to change Java for the better can come together and demonstrate their idea for real.
+</p>
+<p>If you have a great idea for a language change that you want to code, why not join us?
+Simply subscribe to the <a href="https://kijaro.dev.java.net/servlets/ProjectMailingListList">dev mailing list</a>
+and let us know so we can open up a branch.<br />
+</p>
+
+<h3>Rules</h3>
+<p>
+There are just a few rules to try and keep everything going:
+</p>
+<ul>
+<li>Documentation. Each new language feature must have <em>some</em> form of associated document, even if its just a blog. It doesn't have to be much, but should have an outline of why the feature is needed and the syntax implications.</li>
+<li>Backwards compatibility. On svn trunk all existing Java code must compile.</li>
+<li>Comments. Each change in svn trunk must have a comment so we can find it later, such as 'FCM-MREF'.</li>
+<li>er, thats about it!</li>
+</ul>
+
+<h3>Related projects</h3>
+<p>
+Not every language change implementation is captured here at Kijaro.
+This is a list of other websites - feel free to mail us if we're missing something:
+</p>
+<ul>
+<li><a href="http://paranamer.codehaus.org/">Parameter names</a> - Getting access to the parameter names of methods</li>
+<li><a href="http://markmahieu.blogspot.com/2008/01/cicearm-prototype.html">CICE/ARM</a> - Implementation of the CICE/ARM proposals</li>
+<li><a href="http://www.javac.info">BGGA</a> - Implementation of the BGGA closures proposal</li>
+</ul>
+
+<h3>Developer information</h3>
+<p>
+Kijaro is based on Sun OpenJDK javac, currently from jdk7-b23, which is contained in a <a href="https://kijaro.dev.java.net/svn/kijaro/sun/">vendor branch</a>.
+Unless the OpenJDK version contains major changes that we need, it is unlikely that this version will be updated in the near future.
+</p>
+<p>
+Each subproject will use a separate <a href="https://kijaro.dev.java.net/svn/kijaro/branches/">branch</a>.
+Subversion trunk will contain the merged changes.
+</p>
+<p>
+The compiler is built using the standard ant script in the make directory.
+To get this to work, you can follow these <a href="https://kijaro.dev.java.net/svn/kijaro/branches/fcm/langtools/BUILDING.txt">build instructions</a>.
+</p>
+<p>
+The resulting compiler can be used in place of a normal compiler.
+The compiler build will create a javac unix shell file.
+Windows users can use <a href="https://kijaro.dev.java.net/svn/kijaro/branches/fcm/examples/javac.bat">this batch file</a>.
+</p>
+<p>
+IDE integration files may be checked into subversion, and we would welcome such submissions.
+We would also greatly welcome anyone with experience of integrating syntax changes into IDEs.
+</p>
+<p>
+Information on making changes to the compiler:
+</p>
+<ul>
+<li>Detailed <a href="http://www.ahristov.com/tutorial/java-compiler/">tutorial</a>, based around adding an operator</li>
+<li>Summary of the <a href="AST.html">AST</a> and adding a new node</li>
+<li>Summary of the <a href="Attr.html">Attr</a> class</li>
+</ul>
+<p>
+Subversion also contains the source for all the website pages.
+The website must only be edited using subversion.
+It must not be edited using the online java.net tool.
+</p>
+
+<h3>'Kijaro'</h3>
+<p>
+Kijaro is short for Kilimanjaro, Africa's highest mountain. We hope that this project can take Java to new heights too!
+</p>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+var pageTracker = _gat._getTracker("UA-1425975-3");
+pageTracker._initData();
+pageTracker._trackPageview();
+</script>
