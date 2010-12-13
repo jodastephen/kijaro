@@ -36,8 +36,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.InvocationHandler;
 import java.lang.ref.SoftReference;
 import java.io.InputStream;
 import java.io.ObjectStreamField;
@@ -114,10 +112,11 @@ import sun.reflect.annotation.*;
  * @see     java.lang.ClassLoader#defineClass(byte[], int, int)
  * @since   JDK1.0
  */
-public final class Class<T> implements java.io.Serializable,
-				       java.lang.reflect.GenericDeclaration,
-				       java.lang.reflect.Type,
-				       java.lang.reflect.AnnotatedElement {
+public final
+    class Class<T> implements java.io.Serializable,
+                              java.lang.reflect.GenericDeclaration,
+                              java.lang.reflect.Type,
+                              java.lang.reflect.AnnotatedElement {
     private static final int ANNOTATION= 0x00002000;
     private static final int ENUM      = 0x00004000;
     private static final int SYNTHETIC = 0x00001000;
@@ -132,6 +131,7 @@ public final class Class<T> implements java.io.Serializable,
      * objects.
      */
     private Class() {}
+
 
     /**
      * Converts the object to a string. The string representation is the

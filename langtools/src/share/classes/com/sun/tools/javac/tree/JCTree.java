@@ -41,6 +41,7 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Scope;
 import com.sun.tools.javac.code.Symbol.*;
+import com.sun.source.tree.Tree;
 import com.sun.source.tree.*;
 
 import static com.sun.tools.javac.code.BoundKind.*;
@@ -244,7 +245,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
 
     /** Formal type parameters, of type TypeParameter.
      */
-    public static final int TYPEPARAMETER = TYPEAPPLY + 1;
+    public static final int TYPEPARAMETER = CONTRACT + 1; // CONTRACTS
 
     /** Type argument.
      */
@@ -2162,7 +2163,7 @@ public abstract class JCTree implements Tree, Cloneable, DiagnosticPosition {
      */
     public static abstract class Visitor {
         public void visitTopLevel(JCCompilationUnit that)    { visitTree(that); }
-		public void visitImport(JCImport that)               { visitTree(that); }
+        public void visitImport(JCImport that)               { visitTree(that); }
         public void visitClassDef(JCClassDecl that)          { visitTree(that); }
         public void visitMethodDef(JCMethodDecl that)        { visitTree(that); }
         public void visitVarDef(JCVariableDecl that)         { visitTree(that); }
