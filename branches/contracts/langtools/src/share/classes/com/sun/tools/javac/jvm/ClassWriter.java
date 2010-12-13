@@ -27,6 +27,8 @@ package com.sun.tools.javac.jvm;
 
 import java.io.*;
 import java.util.*;
+import java.util.Set;
+import java.util.HashSet;
 
 import javax.tools.JavaFileManager;
 import javax.tools.FileObject;

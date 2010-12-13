@@ -869,7 +869,7 @@ public class MemberEnter extends JCTree.Visitor implements Completer {
                     interfaceTrees.prepend(make.Type(syms.serializableType));
             }
             for (JCExpression iface : interfaceTrees) {
-            	Type i = attr.attribBase(iface, baseEnv, false, true, true);
+                Type i = attr.attribBase(iface, baseEnv, false, true, true);
                 if (i.tag == CLASS) {
                 	if (iface instanceof JCContract) {
 						contracts.append(i);
